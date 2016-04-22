@@ -59,12 +59,11 @@ namespace lwr{
         LWRSim(std::string const& name);
         bool configureHook();
         void updateHook();
-        void read();
-        void write();
+        void WorldUpdateBegin();
+        void WorldUpdateEnd();
         virtual ~LWRSim(){};
     protected:
         bool getModel(const std::string& gazebo_comp_name,const std::string& model_name,double timeout_s = 20.0);
-        bool getModelThread(const std::string& gazebo_comp_name,const std::string& model_name, double timeout_s);
         bool waitForROSService(std::string service_name);
         void setJointImpedanceControlMode();
         void setJointTorqueControlMode();
@@ -117,8 +116,10 @@ namespace lwr{
         bool set_joint_pos_no_dynamics_;
         bool set_brakes_;
 
-        gazebo::physics::WorldPtr world;
         gazebo::physics::ModelPtr model;
+        gazebo::event::ConnectionPtr world_begin;
+        gazebo::event::ConnectionPtr world_end;
+    
         std::thread get_model_thread;
         RTT::SendHandle<gazebo::physics::ModelPtr(const std::string&,double)> get_model_handle;
         

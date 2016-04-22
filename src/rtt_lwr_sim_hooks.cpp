@@ -11,9 +11,9 @@ using namespace RTT;
 using namespace RTT::os;
 using namespace Eigen;
 
-void LWRSim::read()
+void LWRSim::WorldUpdateBegin()
 {
-    if(!is_configured) return;
+    if(!is_configured && !isRunning()) return;
 //     log(RTT::Debug) << getName() << " UpdateHook() BEGIN "<< TimeService::Instance()->getNSecs() << endlog();
 //     RTT::os::MutexLock lock(gazebo_mutex_);
 //     log(RTT::Debug) << getName() << " UpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
@@ -324,9 +324,9 @@ void LWRSim::read()
     <<"\n -- duration: "<<tduration<< endlog();
 
 }
-void LWRSim::write()
+void LWRSim::WorldUpdateEnd()
 {
-    if(!is_configured) return;
+    if(!is_configured && !isRunning()) return;
     /*RTT::os::MutexTryLock trylock(gazebo_mutex_);
     if(trylock.isSuccessful() == false) {
         log(RTT::Debug) << getName() << " gazeboUpdateHook() : mutex locked, waiting.. "<< TimeService::Instance()->getNSecs() << endlog();

@@ -29,8 +29,8 @@ timeout_s(2.0),
 is_configured(false),
 gravity_vector(0.,0.,-9.81289)
 {
-    this->provides("gazebo")->addOperation("read",&LWRSim::read,this,RTT::ClientThread);
-    this->provides("gazebo")->addOperation("write",&LWRSim::write,this,RTT::ClientThread);
+    this->provides("gazebo")->addOperation("WorldUpdateBegin",&LWRSim::WorldUpdateBegin,this,RTT::ClientThread);
+    this->provides("gazebo")->addOperation("WorldUpdateEnd",&LWRSim::WorldUpdateEnd,this,RTT::ClientThread);
     this->addOperation("setLinkGravityMode",&LWRSim::setLinkGravityMode,this,RTT::ClientThread);
     this->addOperation("ready",&LWRSim  ::readyService,this,RTT::ClientThread);
     //this->addAttribute("fromKRL", m_fromKRL);
@@ -108,6 +108,9 @@ gravity_vector(0.,0.,-9.81289)
 
     this->addOperation("setInitialJointPosition",&LWRSim::setInitialJointPosition,this,OwnThread);
     this->addOperation("getModel",&LWRSim::getModel,this,ClientThread);
+    
+    world_begin =  gazebo::event::Events::ConnectWorldUpdateBegin(std::bind(&LWRSim::WorldUpdateBegin,this));
+    world_end = gazebo::event::Events::ConnectWorldUpdateEnd(std::bind(&LWRSim::WorldUpdateEnd,this));
 
 }
 
@@ -139,36 +142,6 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
     log(Error) << "Peer [" << gazebo_comp_name << "] does not exists" << endlog();
     return false;
 }
-
-bool LWRSim::getModelThread(const std::string& gazebo_comp_name,
-                            const std::string& model_name,
-                            double timeout_s)
-{
-//     OperationCaller<gazebo::physics::ModelPtr(const std::string&,double)> get_model = getPeer(gazebo_comp_name)->getOperation("getModelPtr");
-//     if(!get_model.ready())
-//     {
-//         log(Error) << "getWorldPtr does not seem to exists" << endlog();
-//         return false;
-//     }
-//     auto tstart = RTT::os::TimeService::Instance()->getTicks();
-//     while(true)
-//     {
-//         auto elapsed = RTT::os::TimeService::Instance()->getSeconds(tstart);
-//         if(elapsed > timeout_s)
-//         {
-//             RTT::log(RTT::Error) << "Model timeout" << RTT::endlog();
-//             return false;
-//         }
-//         SendHandle<gazebo::physics::ModelPtr(const std::string&,double)> h = get_model.send(model_name,timeout_s);
-//         h.collect(model);
-//         if(model) break;
-//         usleep(1E6);
-//     }
-//     
-//     log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
-//     return true;
-}
-
 
 void LWRSim::updateHook()
 {
