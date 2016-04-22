@@ -11,11 +11,18 @@ using namespace RTT;
 using namespace RTT::os;
 using namespace Eigen;
 
-void LWRSim::updateHook()
+void LWRSim::read()
 {
-    log(RTT::Debug) << getName() << " UpdateHook() BEGIN "<< TimeService::Instance()->getNSecs() << endlog();
-    RTT::os::MutexLock lock(gazebo_mutex_);
-    log(RTT::Debug) << getName() << " UpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
+    if(!is_configured) return;
+//     log(RTT::Debug) << getName() << " UpdateHook() BEGIN "<< TimeService::Instance()->getNSecs() << endlog();
+//     RTT::os::MutexLock lock(gazebo_mutex_);
+//     log(RTT::Debug) << getName() << " UpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
+    for(unsigned j=0; j<joints_idx_.size(); j++) {
+        jnt_pos_[j] = gazebo_joints_[joints_idx_[j]]->GetAngle(0).Radian();
+        jnt_vel_[j] = gazebo_joints_[joints_idx_[j]]->GetVelocity(0);
+        jnt_trq_[j] = gazebo_joints_[joints_idx_[j]]->GetForce(0u);
+    }
+    
     static TimeService::nsecs last_tstart,tstart,tstart_wait;
     tstart = TimeService::Instance()->getNSecs();
     // Reset commands from users
@@ -28,7 +35,7 @@ void LWRSim::updateHook()
     if(set_joint_pos_no_dynamics_)
     {
         for(unsigned j=0; j<joints_idx_.size(); j++)
-#ifdef GAZEBO_6
+#ifdef GAZEBO_GREATER_6
             gazebo_joints_[joints_idx_[j]]->SetPosition(0,jnt_pos_no_dyn_[j]);
 #else
 	    gazebo_joints_[joints_idx_[j]]->SetAngle(0,jnt_pos_no_dyn_[j]);
@@ -317,8 +324,9 @@ void LWRSim::updateHook()
     <<"\n -- duration: "<<tduration<< endlog();
 
 }
-void LWRSim::gazeboUpdateHook(gazebo::physics::ModelPtr model)
+void LWRSim::write()
 {
+    if(!is_configured) return;
     /*RTT::os::MutexTryLock trylock(gazebo_mutex_);
     if(trylock.isSuccessful() == false) {
         log(RTT::Debug) << getName() << " gazeboUpdateHook() : mutex locked, waiting.. "<< TimeService::Instance()->getNSecs() << endlog();
@@ -326,13 +334,13 @@ void LWRSim::gazeboUpdateHook(gazebo::physics::ModelPtr model)
         log(RTT::Debug) << getName() << " gazeboUpdateHook() : let's go!"<< TimeService::Instance()->getNSecs() << endlog();
     }*/
     // Locking gazebo should be safe as UpdateHook() waits on updateworld end ?
-    log(RTT::Debug) << getName() << " gazeboUpdateHook() BEGIN "<< TimeService::Instance()->getNSecs() << endlog();
-    RTT::os::MutexLock lock(gazebo_mutex_);
-    // Checking if model is correct
-    if(model.get() == NULL){
-        log(RTT::Debug) << getName() << " gazeboUpdateHook() : model is NULL "<< TimeService::Instance()->getNSecs() << endlog();
-        return;
-    }
+//     log(RTT::Debug) << getName() << " gazeboUpdateHook() BEGIN "<< TimeService::Instance()->getNSecs() << endlog();
+//     RTT::os::MutexLock lock(gazebo_mutex_);
+//     // Checking if model is correct
+//     if(model.get() == NULL){
+//         log(RTT::Debug) << getName() << " gazeboUpdateHook() : model is NULL "<< TimeService::Instance()->getNSecs() << endlog();
+//         return;
+//     }
     log(RTT::Debug) << getName() << " gazeboUpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
 
     // Read From gazebo simulation
@@ -365,6 +373,4 @@ void LWRSim::gazeboUpdateHook(gazebo::physics::ModelPtr model)
              it != model_links_.end();++it)
              (*it)->SetGravityMode(false);
     }
-    log(RTT::Debug) << getName() << " gazeboUpdateHook() END "<< TimeService::Instance()->getNSecs() << endlog();
-    this->trigger();
 }

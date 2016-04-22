@@ -20,6 +20,7 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Int32.h>
+#include <sensor_msgs/JointState.h>
 
 #include <tf_conversions/tf_kdl.h>
 
@@ -27,7 +28,7 @@
 
 #include <vector>
 
-#include <sensor_msgs/JointState.h>
+
 #include <rtt_rosclock/rtt_rosclock.h>
 #include <Eigen/Core>
 #include <time.h>
@@ -35,24 +36,21 @@
 #include <sstream>
 #include <rtt/Logger.hpp>
 #include <rtt_roscomm/rtt_rostopic.h>
-#include <urdf/model.h>
+
 #include <rtt_rosparam/rosparam.h>
 
 #include <rtt_ros_kdl_tools/tools.hpp>
-#include <boost/scoped_ptr.hpp>
+#include <rtt_ros_kdl_tools/chain_utils.hpp>
 
+#include <urdf/model.h>
 #include <eigen_conversions/eigen_kdl.h>
 #include <kdl_conversions/kdl_msg.h>
 #include <eigen_conversions/eigen_msg.h>
 
-#include <boost/thread.hpp>
 #include <std_srvs/Empty.h>
-
-using namespace KDL;
-using namespace RTT;
-using namespace Eigen;
-using namespace RTT::corba;
-
+#include <thread>
+#include <memory>
+//#include <rtt_gazebo_embedded/rtt_gazebo_embedded.hh>
 
 namespace lwr{
 
@@ -61,8 +59,12 @@ namespace lwr{
         LWRSim(std::string const& name);
         bool configureHook();
         void updateHook();
+        void read();
+        void write();
         virtual ~LWRSim(){};
     protected:
+        bool getModel(const std::string& gazebo_comp_name,const std::string& model_name,double timeout_s = 20.0);
+        bool getModelThread(const std::string& gazebo_comp_name,const std::string& model_name, double timeout_s);
         bool waitForROSService(std::string service_name);
         void setJointImpedanceControlMode();
         void setJointTorqueControlMode();
@@ -115,6 +117,11 @@ namespace lwr{
         bool set_joint_pos_no_dynamics_;
         bool set_brakes_;
 
+        gazebo::physics::WorldPtr world;
+        gazebo::physics::ModelPtr model;
+        std::thread get_model_thread;
+        RTT::SendHandle<gazebo::physics::ModelPtr(const std::string&,double)> get_model_handle;
+        
         std::vector<double> prop_joint_offset;
 
         RTT::InputPort<sensor_msgs::JointState > port_JointStateGazebo;
@@ -175,10 +182,10 @@ namespace lwr{
         KDL::Tree kdl_tree_;
         KDL::Chain kdl_chain_;
 
-        boost::scoped_ptr<KDL::ChainFkSolverVel_recursive> fk_vel_solver;
-        boost::scoped_ptr<KDL::ChainDynParam> id_dyn_solver;
-        boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver;
-        boost::scoped_ptr<KDL::ChainIdSolver_RNE> id_rne_solver;
+        std::unique_ptr<KDL::ChainFkSolverVel_recursive> fk_vel_solver;
+        std::unique_ptr<KDL::ChainDynParam> id_dyn_solver;
+        std::unique_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver;
+        std::unique_ptr<KDL::ChainIdSolver_RNE> id_rne_solver;
 
         bool safety_checks_;
 
@@ -238,6 +245,8 @@ namespace lwr{
         RTT::os::MutexRecursive gazebo_mutex_,rtt_mutex_;
         RTT::os::Semaphore rtt_sem_;
         double timeout_s;
+private:
+    bool is_configured;
     };
 }
 

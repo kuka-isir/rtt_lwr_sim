@@ -26,10 +26,11 @@ set_brakes_(false),
 sync_with_cmds_(true),
 nb_loops_(0),
 timeout_s(2.0),
+is_configured(false),
 gravity_vector(0.,0.,-9.81289)
 {
-    this->provides("gazebo")->addOperation("configure",&LWRSim::gazeboConfigureHook,this,RTT::ClientThread);
-    this->provides("gazebo")->addOperation("update",&LWRSim::gazeboUpdateHook,this,RTT::ClientThread);
+    this->provides("gazebo")->addOperation("read",&LWRSim::read,this,RTT::ClientThread);
+    this->provides("gazebo")->addOperation("write",&LWRSim::write,this,RTT::ClientThread);
     this->addOperation("setLinkGravityMode",&LWRSim::setLinkGravityMode,this,RTT::ClientThread);
     this->addOperation("ready",&LWRSim  ::readyService,this,RTT::ClientThread);
     //this->addAttribute("fromKRL", m_fromKRL);
@@ -106,18 +107,88 @@ gravity_vector(0.,0.,-9.81289)
     this->addOperation("setCartesianImpedanceControlMode",&LWRSim::setCartesianImpedanceControlMode,this,OwnThread);
 
     this->addOperation("setInitialJointPosition",&LWRSim::setInitialJointPosition,this,OwnThread);
+    this->addOperation("getModel",&LWRSim::getModel,this,ClientThread);
 
 }
-void LWRSim::setJointTorqueControlMode(){
-        if(!isConfigured())
+
+bool LWRSim::getModel(const std::string& gazebo_comp_name,
+                      const std::string& model_name,
+                      double timeout_s)
+{
+    if(model)
+    {
+        log(Warning) << "Model ["<<model_name<<"] already loaded !"<< endlog();
+        return true;
+    }
+    gazebo::printVersion();
+    if(hasPeer(gazebo_comp_name))
+    {
+        OperationCaller<gazebo::physics::ModelPtr(const std::string&,double)> get_model = getPeer(gazebo_comp_name)->getOperation("getModelPtr");
+        if(!get_model.ready())
         {
-            log(Error) << "Please configure first, doing nothing." << endlog();
+            log(Error) << "getWorldPtr does not seem to exists" << endlog();
+            return false;
         }
-        setJointImpedanceControlMode();
-        Eigen::VectorXd kp(joints_idx_.size()),kd(joints_idx_.size());
-        kp.setConstant(0.0);
-        kd.setConstant(0.0);
-        setJointImpedance(kp,kd);
+        model = get_model.call(model_name,timeout_s);
+        if(model)
+        {
+            log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
+            return true;
+        }
+    }
+    log(Error) << "Peer [" << gazebo_comp_name << "] does not exists" << endlog();
+    return false;
+}
+
+bool LWRSim::getModelThread(const std::string& gazebo_comp_name,
+                            const std::string& model_name,
+                            double timeout_s)
+{
+//     OperationCaller<gazebo::physics::ModelPtr(const std::string&,double)> get_model = getPeer(gazebo_comp_name)->getOperation("getModelPtr");
+//     if(!get_model.ready())
+//     {
+//         log(Error) << "getWorldPtr does not seem to exists" << endlog();
+//         return false;
+//     }
+//     auto tstart = RTT::os::TimeService::Instance()->getTicks();
+//     while(true)
+//     {
+//         auto elapsed = RTT::os::TimeService::Instance()->getSeconds(tstart);
+//         if(elapsed > timeout_s)
+//         {
+//             RTT::log(RTT::Error) << "Model timeout" << RTT::endlog();
+//             return false;
+//         }
+//         SendHandle<gazebo::physics::ModelPtr(const std::string&,double)> h = get_model.send(model_name,timeout_s);
+//         h.collect(model);
+//         if(model) break;
+//         usleep(1E6);
+//     }
+//     
+//     log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
+//     return true;
+}
+
+
+void LWRSim::updateHook()
+{
+    static int n = 0;
+    if(n > 0)
+        log(Warning) << getName() << " should not be a periodic component !" << endlog();
+    n++;
+}
+
+void LWRSim::setJointTorqueControlMode()
+{
+    if(!isConfigured())
+    {
+        log(Error) << "Please configure first, doing nothing." << endlog();
+    }
+    setJointImpedanceControlMode();
+    Eigen::VectorXd kp(joints_idx_.size()),kd(joints_idx_.size());
+    kp.setConstant(0.0);
+    kd.setConstant(0.0);
+    setJointImpedance(kp,kd);
 }
 bool LWRSim::readyService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& res)
 {
@@ -158,6 +229,7 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
     //NOTE: Get the joint names and store their indices
     // Because we have base_joint (fixed), j0...j6, ati_joint (fixed)
     int idx = 0;
+    joints_idx_.clear();
     for(gazebo::physics::Joint_V::iterator jit=gazebo_joints_.begin();
         jit != gazebo_joints_.end();++jit,++idx)
     {
@@ -324,7 +396,7 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
     resetCartesianImpedanceGains();
 
     log(Info) << getName() << " done configuring gazebo" << endlog();
-    return ret;
+    return true;
 }
 
 void LWRSim::resetJointImpedanceGains()
@@ -346,8 +418,10 @@ void LWRSim::setInitialJointPosition(const std::vector<double>& jnt_pos_cmd)
     set_joint_pos_no_dynamics_ = true;
 }
 
-bool LWRSim::configureHook(){
-    return true;
+bool LWRSim::configureHook()
+{
+    this->is_configured = gazeboConfigureHook(model);
+    return is_configured;
 }
 
 
