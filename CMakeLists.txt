@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rtt_lwr_sim)
 
-#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Release)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 find_package(catkin REQUIRED COMPONENTS
   rtt_ros
@@ -23,9 +25,6 @@ if(GAZEBO_VERSION)
       add_definitions(-DGAZEBO_GREATER_6)
   endif()
 endif()
-
-list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
-link_directories(${GAZEBO_LIBRARY_DIRS})
 
 find_package(Eigen REQUIRED)
 find_package(orocos_kdl REQUIRED)
@@ -51,7 +50,7 @@ target_link_libraries(${PROJECT_NAME}
    ${GAZEBO_LIBRARIES}
 )
 # orocos_component(lwr_gazebo_service src/lwr_gazebo_service.cpp)
-# 
+#
 # target_link_libraries(lwr_gazebo_service
 #     ${GAZEBO_LIBRARIES}
 #     ${catkin_LIBRARIES}
