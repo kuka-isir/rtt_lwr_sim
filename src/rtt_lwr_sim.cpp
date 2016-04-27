@@ -124,23 +124,23 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
         return true;
     }
     gazebo::printVersion();
-    if(hasPeer(gazebo_comp_name))
+//     if(hasPeer(gazebo_comp_name))
+//     {
+//         OperationCaller<gazebo::physics::ModelPtr(const std::string&,double)> get_model = getPeer(gazebo_comp_name)->getOperation("getModelPtr");
+    if(! gazebo::physics::get_world())
     {
-        OperationCaller<gazebo::physics::ModelPtr(const std::string&,double)> get_model = getPeer(gazebo_comp_name)->getOperation("getModelPtr");
-        if(!get_model.ready())
-        {
-            log(Error) << "getWorldPtr does not seem to exists" << endlog();
-            return false;
-        }
-        model = get_model.call(model_name,timeout_s);
-        if(model)
-        {
-            log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
-            return true;
-        }
+        log(Error) << "getWorldPtr does not seem to exists" << endlog();
+        return false;
     }
-    log(Error) << "Peer [" << gazebo_comp_name << "] does not exists" << endlog();
-    return false;
+    model = gazebo::physics::get_world()->GetModel(getName());
+    if(model)
+    {
+        log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
+        return true;
+    }
+//     }
+//     log(Error) << "Peer [" << gazebo_comp_name << "] does not exists" << endlog();
+    return bool(model);
 }
 
 void LWRSim::updateHook()
