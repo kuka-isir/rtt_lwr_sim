@@ -145,10 +145,10 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
 
 void LWRSim::updateHook()
 {
-    static int n = 0;
-    if(n > 0)
-        log(Warning) << getName() << " should not be a periodic component !" << endlog();
-    n++;
+    // static int n = 0;
+    // if(n > 0)
+    //     log(Warning) << getName() << " should not be a periodic component !" << endlog();
+    // n++;
 }
 
 void LWRSim::setJointTorqueControlMode()
