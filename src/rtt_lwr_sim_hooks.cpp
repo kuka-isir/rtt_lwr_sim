@@ -22,7 +22,7 @@ void LWRSim::WorldUpdateBegin()
         jnt_vel_[j] = gazebo_joints_[joints_idx_[j]]->GetVelocity(0);
         jnt_trq_[j] = gazebo_joints_[joints_idx_[j]]->GetForce(0u);
     }
-    
+
     static TimeService::nsecs last_tstart,tstart,tstart_wait;
     tstart = TimeService::Instance()->getNSecs();
     // Reset commands from users
@@ -38,7 +38,7 @@ void LWRSim::WorldUpdateBegin()
 #ifdef GAZEBO_GREATER_6
             gazebo_joints_[joints_idx_[j]]->SetPosition(0,jnt_pos_no_dyn_[j]);
 #else
-	    gazebo_joints_[joints_idx_[j]]->SetAngle(0,jnt_pos_no_dyn_[j]);
+            gazebo_joints_[joints_idx_[j]]->SetAngle(0,jnt_pos_no_dyn_[j]);
 #endif
         // Set jnt pos
         jnt_pos_cmd_ = jnt_pos_ = jnt_pos_no_dyn_;
@@ -304,24 +304,24 @@ void LWRSim::WorldUpdateBegin()
     port_RobotState.write(robot_state);
     port_FRIState.write(fri_state);
 
-    rtt_sem_.signal();
+    // rtt_sem_.signal();
 
 
-    TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
-    log(RTT::Debug) << getName() << " UpdateHook()  END "
-    <<tstart
-    <<"\n - jnt_trq_cmd_fs:" << jnt_trq_cmd_fs
-    <<"\n - jnt_pos_cmd_fs:" << jnt_pos_cmd_fs
-    <<"\n - jnt_trq_cmd_:"<<jnt_trq_cmd_.transpose()
-    <<"\n - jnt_pos_cmd_:"<<jnt_pos_cmd_.transpose()
-    <<"\n - sync_with_cmds:"<<sync_with_cmds_
-    <<"\n - Waited for cmds :"<<n_wait
-    <<"\n - Waited for cmds ns :"<<tduration_wait
-    <<"\n - set_brakes:"<<set_brakes_
-    <<"\n - robot_state.control:"<<robot_state.control
-    <<"\n -- kp: "<<kp_.transpose()
-    <<"\n -- kd: "<<kd_.transpose()
-    <<"\n -- duration: "<<tduration<< endlog();
+    // TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
+    // log(RTT::Debug) << getName() << " UpdateHook()  END "
+    // <<tstart
+    // <<"\n - jnt_trq_cmd_fs:" << jnt_trq_cmd_fs
+    // <<"\n - jnt_pos_cmd_fs:" << jnt_pos_cmd_fs
+    // <<"\n - jnt_trq_cmd_:"<<jnt_trq_cmd_.transpose()
+    // <<"\n - jnt_pos_cmd_:"<<jnt_pos_cmd_.transpose()
+    // <<"\n - sync_with_cmds:"<<sync_with_cmds_
+    // <<"\n - Waited for cmds :"<<n_wait
+    // <<"\n - Waited for cmds ns :"<<tduration_wait
+    // <<"\n - set_brakes:"<<set_brakes_
+    // <<"\n - robot_state.control:"<<robot_state.control
+    // <<"\n -- kp: "<<kp_.transpose()
+    // <<"\n -- kd: "<<kd_.transpose()
+    // <<"\n -- duration: "<<tduration<< endlog();
 
 }
 void LWRSim::WorldUpdateEnd()
@@ -341,7 +341,7 @@ void LWRSim::WorldUpdateEnd()
 //         log(RTT::Debug) << getName() << " gazeboUpdateHook() : model is NULL "<< TimeService::Instance()->getNSecs() << endlog();
 //         return;
 //     }
-    log(RTT::Debug) << getName() << " gazeboUpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
+    // log(RTT::Debug) << getName() << " gazeboUpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
 
     // Read From gazebo simulation
     for(unsigned j=0; j<joints_idx_.size(); j++) {

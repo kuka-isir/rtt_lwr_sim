@@ -23,7 +23,7 @@ safety_checks_(false),
 connect_to_rtt_gazebo_at_configure(true),
 set_joint_pos_no_dynamics_(false),
 set_brakes_(false),
-sync_with_cmds_(true),
+sync_with_cmds_(false),
 nb_loops_(0),
 timeout_s(2.0),
 is_configured(false),
@@ -102,13 +102,13 @@ gravity_vector(0.,0.,-9.81289)
     this->addOperation("setGravityMode",&LWRSim::setGravityMode,this,OwnThread);
     this->addOperation("resetJointImpedanceGains",&LWRSim::resetJointImpedanceGains,this,OwnThread);
 
-    this->addOperation("setJointTorqueControlMode",&LWRSim::setJointTorqueControlMode,this,OwnThread);
-    this->addOperation("setJointImpedanceControlMode",&LWRSim::setJointImpedanceControlMode,this,OwnThread);
-    this->addOperation("setCartesianImpedanceControlMode",&LWRSim::setCartesianImpedanceControlMode,this,OwnThread);
+    // this->addOperation("setJointTorqueControlMode",&LWRSim::setJointTorqueControlMode,this,OwnThread);
+    // this->addOperation("setJointImpedanceControlMode",&LWRSim::setJointImpedanceControlMode,this,OwnThread);
+    // this->addOperation("setCartesianImpedanceControlMode",&LWRSim::setCartesianImpedanceControlMode,this,OwnThread);
 
     this->addOperation("setInitialJointPosition",&LWRSim::setInitialJointPosition,this,OwnThread);
     this->addOperation("getModel",&LWRSim::getModel,this,ClientThread);
-    
+
     world_begin =  gazebo::event::Events::ConnectWorldUpdateBegin(std::bind(&LWRSim::WorldUpdateBegin,this));
     world_end = gazebo::event::Events::ConnectWorldUpdateEnd(std::bind(&LWRSim::WorldUpdateEnd,this));
 
@@ -168,7 +168,7 @@ bool LWRSim::readyService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& r
     return true;
 }
 
-void LWRSim::setLinkGravityMode(const std::string& link_name,bool gravity_mode)
+bool LWRSim::setLinkGravityMode(const std::string& link_name,bool gravity_mode)
 {
     // HACK: I want to remove gravity for ati_link (force torque sensor), but
     // <gravity> tag does not work for some reason, so I'm doin' it here.
@@ -181,8 +181,11 @@ void LWRSim::setLinkGravityMode(const std::string& link_name,bool gravity_mode)
             {
                 gravity_mode_.insert(std::make_pair((*it),gravity_mode));
                 RTT::log(RTT::Warning)<<"Setting link "<<link_name<<" to "<<((*it)->GetGravityMode()? "true":"false")<<RTT::endlog();
+                return true;
             }
         }
+    RTT::log(RTT::Error)<<"["<<getName()<<"] setLinkGravityMode() -> "<<link_name<<" does not exists !"<<RTT::endlog();
+    return false;
 }
 
 bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
@@ -368,7 +371,7 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
     resetJointImpedanceGains();
     resetCartesianImpedanceGains();
 
-    log(Info) << getName() << " done configuring gazebo" << endlog();
+    // log(Info) << getName() << " done configuring gazebo" << endlog();
     return true;
 }
 

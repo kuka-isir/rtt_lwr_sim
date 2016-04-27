@@ -71,7 +71,7 @@ namespace lwr{
         void resetJointImpedanceGains();
         void setInitialJointPosition(const std::vector<double>& joint_position_cmd);
         void resetCartesianImpedanceGains();
-        void setLinkGravityMode(const std::string& link_name,bool gravity_mode);
+        bool setLinkGravityMode(const std::string& link_name,bool gravity_mode);
         void gazeboUpdateHook(gazebo::physics::ModelPtr model);
         bool readyService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& res);
         bool gazeboConfigureHook(gazebo::physics::ModelPtr model);
@@ -119,10 +119,10 @@ namespace lwr{
         gazebo::physics::ModelPtr model;
         gazebo::event::ConnectionPtr world_begin;
         gazebo::event::ConnectionPtr world_end;
-    
+
         std::thread get_model_thread;
         RTT::SendHandle<gazebo::physics::ModelPtr(const std::string&,double)> get_model_handle;
-        
+
         std::vector<double> prop_joint_offset;
 
         RTT::InputPort<sensor_msgs::JointState > port_JointStateGazebo;
