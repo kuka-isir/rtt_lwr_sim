@@ -246,6 +246,7 @@ namespace lwr{
         RTT::os::MutexRecursive gazebo_mutex_,rtt_mutex_;
         RTT::os::Semaphore rtt_sem_;
         double timeout_s;
+        bool verbose=true;
 private:
     bool is_configured;
     };

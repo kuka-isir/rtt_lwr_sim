@@ -149,13 +149,14 @@ void LWRSim::WorldUpdateBegin()
         if(!sync_with_cmds_)
             break;
 
-        if(false && n_wait % 10 == 0 && !exit_loop)
+        if(verbose && n_wait % 10 == 0 && !exit_loop)
         {
-            log(RTT::Debug) << getName() << " UpdateHook() : waiting "<< TimeService::Instance()->getNSecs()
+            log(RTT::Debug) << getName()
+            << " WorldUpdateBegin() : waiting "
+            << TimeService::Instance()->getNSecs()
             <<" - pos:"<<jnt_pos_cmd_fs
             <<" - trq:"<<jnt_trq_cmd_fs
             <<" - crt:"<<cart_pos_cmd_fs
-            <<" - set_joint_pos_no_dynamics_:"<<set_joint_pos_no_dynamics_
             << endlog();
         }
         if(!exit_loop){
@@ -307,41 +308,27 @@ void LWRSim::WorldUpdateBegin()
     // rtt_sem_.signal();
 
 
-    // TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
-    // log(RTT::Debug) << getName() << " UpdateHook()  END "
-    // <<tstart
-    // <<"\n - jnt_trq_cmd_fs:" << jnt_trq_cmd_fs
-    // <<"\n - jnt_pos_cmd_fs:" << jnt_pos_cmd_fs
-    // <<"\n - jnt_trq_cmd_:"<<jnt_trq_cmd_.transpose()
-    // <<"\n - jnt_pos_cmd_:"<<jnt_pos_cmd_.transpose()
-    // <<"\n - sync_with_cmds:"<<sync_with_cmds_
-    // <<"\n - Waited for cmds :"<<n_wait
-    // <<"\n - Waited for cmds ns :"<<tduration_wait
-    // <<"\n - set_brakes:"<<set_brakes_
-    // <<"\n - robot_state.control:"<<robot_state.control
-    // <<"\n -- kp: "<<kp_.transpose()
-    // <<"\n -- kd: "<<kd_.transpose()
-    // <<"\n -- duration: "<<tduration<< endlog();
+    TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
+    if(verbose)
+    {
+        log(RTT::Debug) << getName() << " WorldUpdateBegin()  END "
+        <<tstart
+        <<"\n - ["<<jnt_trq_cmd_fs<<"] jnt_trq_cmd_:"<<jnt_trq_cmd_.transpose()
+        <<"\n - ["<<jnt_pos_cmd_fs<<"] jnt_pos_cmd_:"<<jnt_pos_cmd_.transpose()
+        <<"\n - sync_with_cmds:"<<sync_with_cmds_
+        <<"\n - Waited for cmds (loops):"<<n_wait
+        <<"\n - Waited for cmds ns :"<<tduration_wait
+        <<"\n - set_brakes:"<<set_brakes_
+        <<"\n - robot_state.control:"<<robot_state.control
+        <<"\n -- kp: "<<kp_.transpose()
+        <<"\n -- kd: "<<kd_.transpose()
+        <<"\n -- duration: "<<tduration<< endlog();
+    }
 
 }
 void LWRSim::WorldUpdateEnd()
 {
     if(!is_configured && !isRunning()) return;
-    /*RTT::os::MutexTryLock trylock(gazebo_mutex_);
-    if(trylock.isSuccessful() == false) {
-        log(RTT::Debug) << getName() << " gazeboUpdateHook() : mutex locked, waiting.. "<< TimeService::Instance()->getNSecs() << endlog();
-        rtt_sem_.wait();
-        log(RTT::Debug) << getName() << " gazeboUpdateHook() : let's go!"<< TimeService::Instance()->getNSecs() << endlog();
-    }*/
-    // Locking gazebo should be safe as UpdateHook() waits on updateworld end ?
-//     log(RTT::Debug) << getName() << " gazeboUpdateHook() BEGIN "<< TimeService::Instance()->getNSecs() << endlog();
-//     RTT::os::MutexLock lock(gazebo_mutex_);
-//     // Checking if model is correct
-//     if(model.get() == NULL){
-//         log(RTT::Debug) << getName() << " gazeboUpdateHook() : model is NULL "<< TimeService::Instance()->getNSecs() << endlog();
-//         return;
-//     }
-    // log(RTT::Debug) << getName() << " gazeboUpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
 
     // Read From gazebo simulation
     for(unsigned j=0; j<joints_idx_.size(); j++) {

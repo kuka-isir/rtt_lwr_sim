@@ -97,6 +97,8 @@ gravity_vector(0.,0.,-9.81289)
     this->addProperty("kcp",kcp_);
     this->addProperty("kcd",kcd_);
 
+    this->addProperty("verbose",verbose);
+
     this->addOperation("setJointImpedance",&LWRSim::setJointImpedance,this,OwnThread);
     this->addOperation("setCartesianImpedance",&LWRSim::setCartesianImpedance,this,OwnThread);
     this->addOperation("setGravityMode",&LWRSim::setGravityMode,this,OwnThread);
