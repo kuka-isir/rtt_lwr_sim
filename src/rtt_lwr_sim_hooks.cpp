@@ -23,7 +23,7 @@ void LWRSim::WorldUpdateBegin()
         jnt_trq_[j] = gazebo_joints_[joints_idx_[j]]->GetForce(0u);
     }
 
-    static TimeService::nsecs last_tstart,tstart,tstart_wait;
+    TimeService::nsecs tstart,tstart_wait;
     tstart = TimeService::Instance()->getNSecs();
     // Reset commands from users
     jnt_trq_cmd_.setZero();
@@ -55,7 +55,10 @@ void LWRSim::WorldUpdateBegin()
                     ,cart_imp_cmd_fs;
 
     fri_to_krl_cmd_fs = port_ToKRL.readNewest(fri_to_krl);
-    fri_state.timestamp = rtt_rosclock::host_now().toNSec();
+    
+    gazebo::common::Time gz_time = gazebo::physics::get_world()->GetSimTime();
+    ros::Time time_now = ros::Time(gz_time.sec, gz_time.nsec); 
+    fri_state.timestamp = time_now.toNSec();
 
     // Update Robot Internal State to mimic KRC
     // Update cmds to FRI
@@ -266,14 +269,12 @@ void LWRSim::WorldUpdateBegin()
             break;
     }
 
-    ros::Time now = rtt_rosclock::host_now();
     //Update status
-    cart_pos_stamped_.header.stamp = now;
-    cart_wrench_stamped_.header.stamp = now;
-    joint_states_.header.stamp = now;
-
-    joint_states_cmd_.header.stamp = now;
-    joint_states_dyn_.header.stamp = now;
+    cart_pos_stamped_.header.stamp =
+    cart_wrench_stamped_.header.stamp = 
+    joint_states_.header.stamp = 
+    joint_states_cmd_.header.stamp = 
+    joint_states_dyn_.header.stamp = time_now;
 
     Map<VectorXd>(joint_states_.position.data(),joints_idx_.size()) = jnt_pos_;
     Map<VectorXd>(joint_states_.velocity.data(),joints_idx_.size()) = jnt_vel_;
@@ -304,9 +305,6 @@ void LWRSim::WorldUpdateBegin()
 
     port_RobotState.write(robot_state);
     port_FRIState.write(fri_state);
-
-    // rtt_sem_.signal();
-
 
     TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
     if(verbose)

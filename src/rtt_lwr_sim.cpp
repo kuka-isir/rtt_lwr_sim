@@ -126,9 +126,6 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
         return true;
     }
     gazebo::printVersion();
-//     if(hasPeer(gazebo_comp_name))
-//     {
-//         OperationCaller<gazebo::physics::ModelPtr(const std::string&,double)> get_model = getPeer(gazebo_comp_name)->getOperation("getModelPtr");
     if(! gazebo::physics::get_world())
     {
         log(Error) << "getWorldPtr does not seem to exists" << endlog();
@@ -140,17 +137,11 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
         log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
         return true;
     }
-//     }
-//     log(Error) << "Peer [" << gazebo_comp_name << "] does not exists" << endlog();
     return bool(model);
 }
 
 void LWRSim::updateHook()
 {
-    // static int n = 0;
-    // if(n > 0)
-    //     log(Warning) << getName() << " should not be a periodic component !" << endlog();
-    // n++;
 }
 
 void LWRSim::setJointTorqueControlMode()
@@ -257,12 +248,6 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
     rosparam->getRelative("tf_prefix");
     rosparam->getRelative("robot_description");
 
-    /*if(!tf_prefix_.empty() && *tf_prefix_.rbegin() != '/') tf_prefix_+='/';
-    if(tf_prefix_ == "/") tf_prefix_="";
-
-    root_link_ = tf_prefix_ + root_link_;
-    tip_link_ = tf_prefix_ + tip_link_;*/
-
     if(!rtt_ros_kdl_tools::initChainFromROSParamURDF(this,kdl_tree_,kdl_chain_))
     {
         log(Error) << "Error while loading the URDF with params :"
@@ -354,6 +339,8 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
     pos_limits_.resize(joints_idx_.size());
     vel_limits_.resize(joints_idx_.size());
     trq_limits_.resize(joints_idx_.size());
+    
+    // Limits frmo Kuka manual
     pos_limits_ << 170*TORAD,120*TORAD,170*TORAD,120*TORAD,170*TORAD,120*TORAD,170*TORAD;
     vel_limits_ << 112.5*TORAD,112.5*TORAD,112.5*TORAD,112.5*TORAD,180*TORAD,112.5*TORAD,112.5*TORAD;
     trq_limits_ << 200,200,100,100,100,30,30;
@@ -373,7 +360,6 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
     resetJointImpedanceGains();
     resetCartesianImpedanceGains();
 
-    // log(Info) << getName() << " done configuring gazebo" << endlog();
     return true;
 }
 
