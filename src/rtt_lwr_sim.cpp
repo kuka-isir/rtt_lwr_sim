@@ -27,6 +27,7 @@ sync_with_cmds_(false),
 nb_loops_(0),
 timeout_s(2.0),
 is_configured(false),
+verbose(false),
 gravity_vector(0.,0.,-9.81289)
 {
     this->provides("gazebo")->addOperation("WorldUpdateBegin",&LWRSim::WorldUpdateBegin,this,RTT::ClientThread);
@@ -314,7 +315,7 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
 
     for(int i=0;i<FRI_USER_SIZE;i++)
     {
-        fri_from_krl.realData[i]=0;
+        fri_from_krl.realData[i]=0.0;
         fri_from_krl.intData[i]=0;
     }
     fri_from_krl.boolData=0;
