@@ -55,9 +55,9 @@ void LWRSim::WorldUpdateBegin()
                     ,cart_imp_cmd_fs;
 
     fri_to_krl_cmd_fs = port_ToKRL.readNewest(fri_to_krl);
-    
+
     gazebo::common::Time gz_time = gazebo::physics::get_world()->GetSimTime();
-    ros::Time time_now = ros::Time(gz_time.sec, gz_time.nsec); 
+    ros::Time time_now = ros::Time(gz_time.sec, gz_time.nsec);
     fri_state.timestamp = time_now.toNSec();
 
     // Update Robot Internal State to mimic KRC
@@ -271,9 +271,9 @@ void LWRSim::WorldUpdateBegin()
 
     //Update status
     cart_pos_stamped_.header.stamp =
-    cart_wrench_stamped_.header.stamp = 
-    joint_states_.header.stamp = 
-    joint_states_cmd_.header.stamp = 
+    cart_wrench_stamped_.header.stamp =
+    joint_states_.header.stamp =
+    joint_states_cmd_.header.stamp =
     joint_states_dyn_.header.stamp = time_now;
 
     Map<VectorXd>(joint_states_.position.data(),joints_idx_.size()) = jnt_pos_;
@@ -339,14 +339,14 @@ void LWRSim::WorldUpdateEnd()
     if(port_JointTorqueCommand.connected() || port_JointPositionCommand.connected())
     {
         // Enable gravity for everyone
-       for(gazebo::physics::Link_V::iterator it = model_links_.begin();
-             it != model_links_.end();++it)
-             (*it)->SetGravityMode(true);
+    //    for(gazebo::physics::Link_V::iterator it = model_links_.begin();
+    //          it != model_links_.end();++it)
+    //          (*it)->SetGravityMode(true);
 
         // Set Gravity Mode or specified links
-        for(std::map<gazebo::physics::LinkPtr,bool>::iterator it = this->gravity_mode_.begin();
-            it != this->gravity_mode_.end();++it)
-                    it->first->SetGravityMode(it->second);
+        // for(std::map<gazebo::physics::LinkPtr,bool>::iterator it = this->gravity_mode_.begin();
+        //     it != this->gravity_mode_.end();++it)
+        //             it->first->SetGravityMode(it->second);
 
         for(unsigned j=0; j<joints_idx_.size(); j++)
             gazebo_joints_[joints_idx_[j]]->SetForce(0,jnt_trq_gazebo_cmd_[j]);
@@ -354,8 +354,14 @@ void LWRSim::WorldUpdateEnd()
     else
     {
         // If no one is connected, stop gravity
-       for(gazebo::physics::Link_V::iterator it = model_links_.begin();
-             it != model_links_.end();++it)
-             (*it)->SetGravityMode(false);
+    //    for(gazebo::physics::Link_V::iterator it = model_links_.begin();
+    //          it != model_links_.end();++it)
+    //          (*it)->SetGravityMode(false);
+        for(auto joint : gazebo_joints_)
+#ifdef GAZEBO_GREATER_6
+              joint->SetPosition(0,joint->GetAngle(0).Radian());
+#else
+              joint->SetAngle(0,joint->GetAngle(0).Radian());
+#endif
     }
 }
