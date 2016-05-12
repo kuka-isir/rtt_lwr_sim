@@ -14,9 +14,7 @@ using namespace Eigen;
 void LWRSim::WorldUpdateBegin()
 {
     if(!is_configured && !isRunning()) return;
-//     log(RTT::Debug) << getName() << " UpdateHook() BEGIN "<< TimeService::Instance()->getNSecs() << endlog();
-//     RTT::os::MutexLock lock(gazebo_mutex_);
-//     log(RTT::Debug) << getName() << " UpdateHook() START "<< TimeService::Instance()->getNSecs() << endlog();
+
     for(unsigned j=0; j<joints_idx_.size(); j++) {
         jnt_pos_[j] = gazebo_joints_[joints_idx_[j]]->GetAngle(0).Radian();
         jnt_vel_[j] = gazebo_joints_[joints_idx_[j]]->GetVelocity(0);
@@ -27,7 +25,10 @@ void LWRSim::WorldUpdateBegin()
     tstart = TimeService::Instance()->getNSecs();
     // Reset commands from users
     jnt_trq_cmd_.setZero();
-    if(set_brakes_ == false) jnt_pos_cmd_ = jnt_pos_;
+    // Reset joint command to current in case we are missing a command
+    if(set_brakes_ == false)
+        jnt_pos_cmd_ = jnt_pos_;
+
     Xd_cmd_.setZero();
     F_cmd_.setZero();
 
@@ -235,12 +236,12 @@ void LWRSim::WorldUpdateBegin()
 
     tf::wrenchMsgToEigen(cart_wrench_cmd_,F_cmd_);
 
-
     cart_wrench_stamped_.header.frame_id = tip_link_;
     cart_wrench_stamped_.wrench = cart_wrench_;
 
     jnt_trq_gazebo_cmd_ = kg_.asDiagonal() * jnt_trq_grav_kdl_.data;
 
+    // COMPUTE COMMANDS
     switch(static_cast<FRI_CTRL>(robot_state.control)){
         case FRI_CTRL_JNT_IMP:
             // Joint Impedance part
@@ -248,7 +249,7 @@ void LWRSim::WorldUpdateBegin()
             // Additional torque
             jnt_trq_gazebo_cmd_ += jnt_trq_cmd_;
 
-            set_brakes_ = (jnt_trq_cmd_fs != NewData);
+            set_brakes_ = false == (jnt_trq_cmd_fs == NewData || jnt_pos_cmd_fs == NewData);
 
             break;
         case FRI_CTRL_OTHER:
@@ -256,13 +257,13 @@ void LWRSim::WorldUpdateBegin()
             // Joint Position (Joint Imp with kd fixed)
             jnt_trq_gazebo_cmd_ += kp_default_.asDiagonal()*(jnt_pos_cmd_-jnt_pos_) - kd_default_.asDiagonal()*jnt_vel_ ;
 
-            set_brakes_ = (jnt_pos_cmd_fs != NewData);
+            set_brakes_ = !(jnt_pos_cmd_fs == NewData);
             break;
         case FRI_CTRL_CART_IMP:
             //Cartesian Impedance Control
             jnt_trq_gazebo_cmd_ += jac_.data.transpose()*(kcp_.asDiagonal()*(X_err_ + F_cmd_) + kcd_.asDiagonal()*(Xd_err_));
 
-            set_brakes_ = (cart_pos_cmd_fs != NewData);
+            set_brakes_ = !(cart_pos_cmd_fs == NewData);
 
             break;
         default:
@@ -307,12 +308,13 @@ void LWRSim::WorldUpdateBegin()
     port_FRIState.write(fri_state);
 
     TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
+
     if(verbose)
     {
         log(RTT::Debug) << getName() << " WorldUpdateBegin()  END "
         <<tstart
-        <<"\n - ["<<jnt_trq_cmd_fs<<"] jnt_trq_cmd_:"<<jnt_trq_cmd_.transpose()
-        <<"\n - ["<<jnt_pos_cmd_fs<<"] jnt_pos_cmd_:"<<jnt_pos_cmd_.transpose()
+        <<"\n - ["<<jnt_trq_cmd_fs<<"]\tjnt_trq_cmd:"<<jnt_trq_cmd_.transpose()
+        <<"\n - ["<<jnt_pos_cmd_fs<<"]\tjnt_pos_cmd:"<<jnt_pos_cmd_.transpose()
         <<"\n - sync_with_cmds:"<<sync_with_cmds_
         <<"\n - Waited for cmds (loops):"<<n_wait
         <<"\n - Waited for cmds ns :"<<tduration_wait
@@ -335,28 +337,18 @@ void LWRSim::WorldUpdateEnd()
         jnt_trq_[j] = gazebo_joints_[joints_idx_[j]]->GetForce(0u);
     }
 
-
-    if(port_JointTorqueCommand.connected() || port_JointPositionCommand.connected())
+    // If user is connected, let's write command to gazebo
+    if(port_JointTorqueCommand.connected()
+    || port_JointPositionCommand.connected()
+    || port_CartesianPositionCommand.connected())
     {
-        // Enable gravity for everyone
-    //    for(gazebo::physics::Link_V::iterator it = model_links_.begin();
-    //          it != model_links_.end();++it)
-    //          (*it)->SetGravityMode(true);
-
-        // Set Gravity Mode or specified links
-        // for(std::map<gazebo::physics::LinkPtr,bool>::iterator it = this->gravity_mode_.begin();
-        //     it != this->gravity_mode_.end();++it)
-        //             it->first->SetGravityMode(it->second);
 
         for(unsigned j=0; j<joints_idx_.size(); j++)
             gazebo_joints_[joints_idx_[j]]->SetForce(0,jnt_trq_gazebo_cmd_[j]);
     }
     else
     {
-        // If no one is connected, stop gravity
-    //    for(gazebo::physics::Link_V::iterator it = model_links_.begin();
-    //          it != model_links_.end();++it)
-    //          (*it)->SetGravityMode(false);
+        // If not, try to keep the same position TODO: find out why it drifts
         for(auto joint : gazebo_joints_)
 #ifdef GAZEBO_GREATER_6
               joint->SetPosition(0,joint->GetAngle(0).Radian());
