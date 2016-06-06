@@ -138,6 +138,7 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
         log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
         return true;
     }
+    
     return bool(model);
 }
 
@@ -211,7 +212,7 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
 
         if((*jit)->GetLowerLimit(0u) == (*jit)->GetUpperLimit(0u))
         {
-            RTT::log(RTT::Warning)<<"Not adding (fake) fixed joint ["<<name<<"] idx:"<<idx<<RTT::endlog();
+            RTT::log(RTT::Info)<<"Not adding (fake) fixed joint ["<<name<<"] idx:"<<idx<<RTT::endlog();
             continue;
         }
         joints_idx_.push_back(idx);
@@ -340,7 +341,7 @@ bool LWRSim::gazeboConfigureHook(gazebo::physics::ModelPtr model)
     pos_limits_.resize(joints_idx_.size());
     vel_limits_.resize(joints_idx_.size());
     trq_limits_.resize(joints_idx_.size());
-    
+
     // Limits frmo Kuka manual
     pos_limits_ << 170*TORAD,120*TORAD,170*TORAD,120*TORAD,170*TORAD,120*TORAD,170*TORAD;
     vel_limits_ << 112.5*TORAD,112.5*TORAD,112.5*TORAD,112.5*TORAD,180*TORAD,112.5*TORAD,112.5*TORAD;

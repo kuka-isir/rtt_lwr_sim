@@ -46,15 +46,6 @@ void LWRSim::WorldUpdateBegin()
         set_joint_pos_no_dynamics_ = false;
     }
 
-
-    FlowStatus jnt_trq_cmd_fs
-                    ,jnt_pos_cmd_fs
-                    ,cart_pos_cmd_fs
-                    ,cart_wrench_cmd_fs
-                    ,fri_to_krl_cmd_fs
-                    ,jnt_imp_cmd_fs
-                    ,cart_imp_cmd_fs;
-
     fri_to_krl_cmd_fs = port_ToKRL.readNewest(fri_to_krl);
 
     gazebo::common::Time gz_time = gazebo::physics::get_world()->GetSimTime();
@@ -326,6 +317,30 @@ void LWRSim::WorldUpdateBegin()
     }
 
 }
+bool LWRSim::hasReceivedAtLeastOneCommand()
+{
+    static bool has_one_cmd = false;
+    if(has_one_cmd) return true;
+
+    switch(static_cast<FRI_CTRL>(robot_state.control)){
+        case FRI_CTRL_JNT_IMP:
+            if(jnt_trq_cmd_fs == NewData || jnt_pos_cmd_fs == NewData)
+                has_one_cmd = true;
+            break;
+
+        case FRI_CTRL_POSITION:
+            if(jnt_pos_cmd_fs == NewData)
+                has_one_cmd = true;
+            break;
+        case FRI_CTRL_CART_IMP:
+            if(cart_pos_cmd_fs == NewData)
+                has_one_cmd = true;
+            break;
+        default:
+            break;
+    }
+    return has_one_cmd;
+}
 void LWRSim::WorldUpdateEnd()
 {
     if(!is_configured && !isRunning()) return;
@@ -338,9 +353,7 @@ void LWRSim::WorldUpdateEnd()
     }
 
     // If user is connected, let's write command to gazebo
-    if(port_JointTorqueCommand.connected()
-    || port_JointPositionCommand.connected()
-    || port_CartesianPositionCommand.connected())
+    if(this->hasReceivedAtLeastOneCommand())
     {
 
         for(unsigned j=0; j<joints_idx_.size(); j++)

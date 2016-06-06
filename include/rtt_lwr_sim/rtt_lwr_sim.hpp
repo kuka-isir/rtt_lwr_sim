@@ -221,7 +221,7 @@ namespace lwr{
         bool safetyCheck(const Eigen::VectorXd& v, const Eigen::VectorXd& limits,const std::string& name="");
         void updateJointImpedance(const lwr_fri::FriJointImpedance& impedance);
         void updateCartesianImpedance(const lwr_fri::CartesianImpedance& cart_impedance);
-
+        bool hasReceivedAtLeastOneCommand();
         //KDL Stuff
         KDL::Wrenches f_ext_;
 
@@ -231,6 +231,14 @@ namespace lwr{
                       jnt_acc_kdl_,
                       jnt_trq_kdl_,
                       jnt_trq_coriolis_kdl_;
+
+        RTT::FlowStatus jnt_trq_cmd_fs
+                      ,jnt_pos_cmd_fs
+                      ,cart_pos_cmd_fs
+                      ,cart_wrench_cmd_fs
+                      ,fri_to_krl_cmd_fs
+                      ,jnt_imp_cmd_fs
+                      ,cart_imp_cmd_fs;
 
         KDL::Wrench cart_wrench_kdl_;
         KDL::JntSpaceInertiaMatrix mass_kdl_;
