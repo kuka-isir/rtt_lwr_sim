@@ -49,7 +49,7 @@ target_link_libraries(lwr_common
    ${GAZEBO_LIBRARIES}
 )
 
-orocos_component(${PROJECT_NAME} src/rtt_lwr_sim.cpp src/rtt_lwr_sim_hooks.cpp)
+orocos_component(${PROJECT_NAME} src/rtt_lwr_sim.cpp)
 set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
 
 target_link_libraries(${PROJECT_NAME}
