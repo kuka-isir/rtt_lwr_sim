@@ -23,9 +23,9 @@ namespace lwr{
         virtual ~LWRSim(){};
     protected:
 
-        
+
         bool setLinkGravityMode(const std::string& link_name,bool gravity_mode);
-        
+
         gazebo::physics::ModelPtr model;
         gazebo::event::ConnectionPtr world_begin;
         gazebo::event::ConnectionPtr world_end;
@@ -36,6 +36,11 @@ namespace lwr{
         std::map<gazebo::physics::LinkPtr,bool> gravity_mode_;
         gazebo::physics::Joint_V gazebo_joints_;
         gazebo::physics::Link_V model_links_;
+
+        // Current state
+        Eigen::VectorXd jnt_pos_;
+        Eigen::VectorXd jnt_vel_;
+        Eigen::VectorXd jnt_trq_;
 
     };
 }

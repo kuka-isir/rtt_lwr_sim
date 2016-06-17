@@ -61,14 +61,33 @@ target_link_libraries(${PROJECT_NAME}
    ${GAZEBO_LIBRARIES}
    lwr_common
 )
-# orocos_component(lwr_gazebo_service src/lwr_gazebo_service.cpp)
-#
-# target_link_libraries(lwr_gazebo_service
-#     ${GAZEBO_LIBRARIES}
-#     ${catkin_LIBRARIES}
-#     ${USE_OROCOS_LIBRARIES}
-# )
 
+orocos_component(${PROJECT_NAME}_remote src/rtt_lwr_sim_remote.cpp)
+set_property(TARGET ${PROJECT_NAME}_remote APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
+
+target_link_libraries(${PROJECT_NAME}_remote
+   ${catkin_LIBRARIES}
+   ${USE_OROCOS_LIBRARIES}
+   ${kdl_parser_LIBRARIES}
+   ${orocos_kdl_LIBRARIES}
+   ${kdl_conversions_LIBRARIES}
+   ${GAZEBO_LIBRARIES}
+   lwr_common
+)
+message("
+
+
+
+
+${catkin_LIBRARIES}
+
+
+
+
+
+
+
+")
 # add_dependencies(${PROJECT_NAME} lwr_fri_generate_messages_cpp)
 orocos_generate_package(INCLUDE_DIRS include)
 

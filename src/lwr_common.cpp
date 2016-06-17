@@ -178,13 +178,10 @@ bool LWRCommon::configureHook()
     jnt_to_jac_solver.reset(new ChainJntToJacSolver(kdl_chain_));
 
     // Fake LWR
-    jnt_pos_.setZero(ndof);
     jnt_pos_brakes_.resize(ndof);
     jnt_pos_no_dyn_.resize(ndof);
     jnt_pos_fri_offset_.setZero(ndof);
     jnt_pos_old_.setZero(ndof);
-    jnt_vel_.setZero(ndof);
-    jnt_trq_.setZero(ndof);
     jnt_trq_raw_.setZero(ndof);
     grav_trq_.setZero(ndof);
     jnt_pos_cmd_.setZero(ndof);
@@ -249,9 +246,9 @@ bool LWRCommon::configureHook()
     port_JointStatesCommand.setDataSample(joint_states_cmd_);
     port_JointStatesDynamics.setDataSample(joint_states_dyn_);
 
-    port_JointPosition.setDataSample(jnt_pos_);
-    port_JointVelocity.setDataSample(jnt_vel_);
-    port_JointTorque.setDataSample(jnt_trq_);
+    port_JointPosition.setDataSample(jnt_pos_cmd_);
+    port_JointVelocity.setDataSample(jnt_vel_kdl_.data);
+    port_JointTorque.setDataSample(jnt_trq_cmd_);
     port_GravityTorque.setDataSample(jnt_trq_grav_kdl_.data);
     port_Jacobian.setDataSample(jac_);
     port_MassMatrix.setDataSample(mass_kdl_.data);
@@ -444,7 +441,10 @@ bool LWRCommon::hasReceivedAtLeastOneCommand()
     return has_one_cmd;
 }
 
-void LWRCommon::stepInternalModel()
+void LWRCommon::stepInternalModel(
+    const Eigen::VectorXd& jnt_pos,
+    const Eigen::VectorXd& jnt_vel,
+    const Eigen::VectorXd& jnt_trq)
 {
     const int ndof = joints_idx_.size();
 
@@ -454,7 +454,7 @@ void LWRCommon::stepInternalModel()
     jnt_trq_cmd_.setZero();
     // Reset joint command to current in case we are missing a command
     if(set_brakes_ == false)
-        jnt_pos_cmd_ = jnt_pos_;
+        jnt_pos_cmd_ = jnt_pos;
 
     Xd_cmd_.setZero();
     F_cmd_.setZero();
@@ -511,7 +511,7 @@ void LWRCommon::stepInternalModel()
     }
 
     if(safety_checks_)
-        safetyChecks(jnt_pos_,jnt_vel_,jnt_trq_);
+        safetyChecks(jnt_pos,jnt_vel,jnt_trq);
 
     bool exit_loop = false;
     int n_wait=0;
@@ -585,11 +585,11 @@ void LWRCommon::stepInternalModel()
         jnt_trq_cmd_.setZero(ndof);
     }
     if(jnt_pos_cmd_.size() != ndof)
-    {                
+    {
         jnt_pos_cmd_.resize(ndof);
-        jnt_pos_cmd_ = jnt_pos_;
+        jnt_pos_cmd_ = jnt_pos;
     }
-    
+
     TimeService::nsecs tduration_wait = TimeService::Instance()->getNSecs(tstart_wait);
 
     cart_wrench_cmd_fs = port_CartesianWrenchCommand.readNewest(cart_wrench_cmd_);
@@ -605,8 +605,8 @@ void LWRCommon::stepInternalModel()
         updateCartesianImpedance(cart_imp_cmd_);
 
     // Copy State to KDL
-    jnt_pos_kdl_.data = jnt_pos_;
-    jnt_vel_kdl_.data = jnt_vel_;
+    jnt_pos_kdl_.data = jnt_pos;
+    jnt_vel_kdl_.data = jnt_vel;
     jnt_acc_kdl_.data.setConstant(0.0);
 
     // Compute MassMatrix
@@ -661,7 +661,7 @@ void LWRCommon::stepInternalModel()
     switch(static_cast<FRI_CTRL>(robot_state.control)){
         case FRI_CTRL_JNT_IMP:
             // Joint Impedance part
-            jnt_trq_gazebo_cmd_ += kp_.asDiagonal()*(jnt_pos_cmd_ - jnt_pos_) - kd_.asDiagonal()*jnt_vel_ ;
+            jnt_trq_gazebo_cmd_ += kp_.asDiagonal()*(jnt_pos_cmd_ - jnt_pos) - kd_.asDiagonal()*jnt_vel ;
             // Additional torque
             jnt_trq_gazebo_cmd_ += jnt_trq_cmd_;
 
@@ -671,7 +671,7 @@ void LWRCommon::stepInternalModel()
         case FRI_CTRL_OTHER:
         case FRI_CTRL_POSITION:
             // Joint Position (Joint Imp with kd fixed)
-            jnt_trq_gazebo_cmd_ += kp_default_.asDiagonal()*(jnt_pos_cmd_-jnt_pos_) - kd_default_.asDiagonal()*jnt_vel_ ;
+            jnt_trq_gazebo_cmd_ += kp_default_.asDiagonal()*(jnt_pos_cmd_-jnt_pos) - kd_default_.asDiagonal()*jnt_vel ;
 
             set_brakes_ = !(jnt_pos_cmd_fs == NewData);
             break;
@@ -693,9 +693,9 @@ void LWRCommon::stepInternalModel()
     joint_states_cmd_.header.stamp =
     joint_states_dyn_.header.stamp = time_now;
 
-    Map<VectorXd>(joint_states_.position.data(),ndof) = jnt_pos_;
-    Map<VectorXd>(joint_states_.velocity.data(),ndof) = jnt_vel_;
-    Map<VectorXd>(joint_states_.effort.data(),ndof) = jnt_trq_;
+    Map<VectorXd>(joint_states_.position.data(),ndof) = jnt_pos;
+    Map<VectorXd>(joint_states_.velocity.data(),ndof) = jnt_vel;
+    Map<VectorXd>(joint_states_.effort.data(),ndof) = jnt_trq;
 
     Map<VectorXd>(joint_states_cmd_.position.data(),ndof) = jnt_pos_cmd_;
     Map<VectorXd>(joint_states_cmd_.effort.data(),ndof) = jnt_trq_gazebo_cmd_ - jnt_trq_grav_kdl_.data;
@@ -704,9 +704,9 @@ void LWRCommon::stepInternalModel()
     port_JointStatesCommand.write(joint_states_cmd_);
     port_JointStatesDynamics.write(joint_states_dyn_);
 
-    port_JointPosition.write(jnt_pos_);
-    port_JointVelocity.write(jnt_vel_);
-    port_JointTorque.write(jnt_trq_);
+    port_JointPosition.write(jnt_pos);
+    port_JointVelocity.write(jnt_vel);
+    port_JointTorque.write(jnt_trq);
     port_GravityTorque.write(jnt_trq_grav_kdl_.data);
 
     port_CartesianPosition.write(cart_pos_);
@@ -740,4 +740,8 @@ void LWRCommon::stepInternalModel()
         <<"\n -- kd: "<<kd_.transpose()
         <<"\n -- duration: "<<tduration<< endlog();
     }
+}
+const Eigen::VectorXd& LWRCommon::getComputedCommand()
+{
+    return jnt_trq_gazebo_cmd_;
 }

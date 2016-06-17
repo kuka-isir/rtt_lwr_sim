@@ -59,9 +59,12 @@ namespace lwr{
 
         virtual ~LWRCommon(){};
     protected:
-        void stepInternalModel(); // once jnt_pos,jnt_vel,jnt_trq, does all the calculations and write to ports
-        
+        void stepInternalModel(const Eigen::VectorXd& jnt_pos,
+            const Eigen::VectorXd& jnt_vel,
+            const Eigen::VectorXd& jnt_trq); // once jnt_pos,jnt_vel,jnt_trq, does all the calculations and write to ports
+
         bool waitForROSService(std::string service_name);
+        const Eigen::VectorXd& getComputedCommand();
         void setJointImpedanceControlMode();
         void setJointTorqueControlMode();
         void setCartesianImpedanceControlMode();
@@ -114,10 +117,8 @@ namespace lwr{
                         vel_limits_,
                         trq_limits_;
 
-        Eigen::VectorXd jnt_pos_,
-                        jnt_pos_fri_offset_,
+        Eigen::VectorXd jnt_pos_fri_offset_,
                         jnt_pos_old_,
-                        jnt_trq_,
                         jnt_trq_raw_,
                         grav_trq_,
                         jnt_vel_,

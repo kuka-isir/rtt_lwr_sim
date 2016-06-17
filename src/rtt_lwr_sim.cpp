@@ -96,6 +96,12 @@ bool LWRSim::configureHook()
         joint_names_.push_back(name);
         RTT::log(RTT::Info)<<"Adding joint ["<<name<<"] idx:"<<idx<<RTT::endlog();
     }
+    const int ndof = joints_idx_.size();
+
+    jnt_pos_.setZero(ndof);
+    jnt_vel_.setZero(ndof);
+    jnt_trq_.setZero(ndof);
+
     is_configured = LWRCommon::configureHook();
 
     return is_configured;
@@ -127,8 +133,7 @@ void LWRSim::WorldUpdateBegin()
         set_joint_pos_no_dynamics_ = false;
     }
 
-    stepInternalModel();
-
+    stepInternalModel(jnt_pos_,jnt_vel_,jnt_trq_);
 }
 
 void LWRSim::WorldUpdateEnd()
@@ -141,13 +146,12 @@ void LWRSim::WorldUpdateEnd()
         jnt_vel_[j] = gazebo_joints_[joints_idx_[j]]->GetVelocity(0);
         jnt_trq_[j] = gazebo_joints_[joints_idx_[j]]->GetForce(0u);
     }
-
+    const Eigen::VectorXd& jnt_trq_out = LWRCommon::getComputedCommand();
     // If user is connected, let's write command to gazebo
     if(this->hasReceivedAtLeastOneCommand())
     {
-
         for(unsigned j=0; j<joints_idx_.size(); j++)
-            gazebo_joints_[joints_idx_[j]]->SetForce(0,jnt_trq_gazebo_cmd_[j]);
+            gazebo_joints_[joints_idx_[j]]->SetForce(0,jnt_trq_out[j]);
     }
     else
     {
