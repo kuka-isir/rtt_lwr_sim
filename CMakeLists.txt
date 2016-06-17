@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rtt_lwr_sim)
 
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   lwr_fri
   rtt_ros_kdl_tools
+  model_joint_plugin
 )
 
 find_package(gazebo REQUIRED)
@@ -37,6 +38,16 @@ include_directories(
     ${USE_OROCOS_INCLUDE_DIRS}
     ${GAZEBO_INCLUDE_DIRS}
 )
+orocos_library(lwr_common src/lwr_common.cpp)
+set_property(TARGET lwr_common APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
+target_link_libraries(lwr_common
+   ${catkin_LIBRARIES}
+   ${USE_OROCOS_LIBRARIES}
+   ${kdl_parser_LIBRARIES}
+   ${orocos_kdl_LIBRARIES}
+   ${kdl_conversions_LIBRARIES}
+   ${GAZEBO_LIBRARIES}
+)
 
 orocos_component(${PROJECT_NAME} src/rtt_lwr_sim.cpp src/rtt_lwr_sim_hooks.cpp)
 set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
@@ -48,6 +59,7 @@ target_link_libraries(${PROJECT_NAME}
    ${orocos_kdl_LIBRARIES}
    ${kdl_conversions_LIBRARIES}
    ${GAZEBO_LIBRARIES}
+   lwr_common
 )
 # orocos_component(lwr_gazebo_service src/lwr_gazebo_service.cpp)
 #
