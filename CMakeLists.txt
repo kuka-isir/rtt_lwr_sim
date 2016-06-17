@@ -74,20 +74,7 @@ target_link_libraries(${PROJECT_NAME}_remote
    ${GAZEBO_LIBRARIES}
    lwr_common
 )
-message("
 
-
-
-
-${catkin_LIBRARIES}
-
-
-
-
-
-
-
-")
 # add_dependencies(${PROJECT_NAME} lwr_fri_generate_messages_cpp)
 orocos_generate_package(INCLUDE_DIRS include)
 
