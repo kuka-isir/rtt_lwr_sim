@@ -118,7 +118,7 @@ void LWRCommon::setJointTorqueControlMode()
         log(Error) << "Please configure first, doing nothing." << endlog();
     }
     setJointImpedanceControlMode();
-    Eigen::VectorXd kp(joints_idx_.size()),kd(joints_idx_.size());
+    Eigen::VectorXd kp(kdl_chain_.getNrOfJoints()),kd(kdl_chain_.getNrOfJoints());
     kp.setConstant(0.0);
     kd.setConstant(0.0);
     setJointImpedance(kp,kd);
@@ -127,20 +127,14 @@ bool LWRCommon::readyService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse
 {
     return true;
 }
+const vector< string > LWRCommon::getJointNames()
+{
+    return joint_names_;
+}
 
 bool LWRCommon::configureHook()
 {
-    const int ndof = joints_idx_.size();
-
-    if(ndof == 0)
-    {
-        RTT::log(RTT::Error) << "No Joints could be added, exiting" << RTT::endlog();
-        return false;
-    }
-
-    RTT::log(RTT::Info)<<"Gazebo model found "<<ndof<<" joints "<<RTT::endlog();
-
-        // Get the rosparam service requester
+    // Get the rosparam service requester
     boost::shared_ptr<rtt_rosparam::ROSParam> rosparam =
             this->getProvider<rtt_rosparam::ROSParam>("rosparam");
 
@@ -171,7 +165,17 @@ bool LWRCommon::configureHook()
         <<endlog();
         return false;
     }
+    
+    const int ndof = kdl_chain_.getNrOfJoints();
 
+    if(ndof == 0)
+    {
+        RTT::log(RTT::Error) << "No Joints could be added, exiting" << RTT::endlog();
+        return false;
+    }
+
+    RTT::log(RTT::Info)<<"Gazebo model found "<<ndof<<" joints "<<RTT::endlog();
+    
     id_dyn_solver.reset(new ChainDynParam(kdl_chain_,gravity_vector));
     id_rne_solver.reset(new ChainIdSolver_RNE(kdl_chain_,gravity_vector));
     fk_vel_solver.reset(new ChainFkSolverVel_recursive(kdl_chain_));
@@ -215,6 +219,10 @@ bool LWRCommon::configureHook()
     rtt_ros_kdl_tools::initJointStateFromKDLCHain(kdl_chain_,joint_states_);
     rtt_ros_kdl_tools::initJointStateFromKDLCHain(kdl_chain_,joint_states_cmd_);
     rtt_ros_kdl_tools::initJointStateFromKDLCHain(kdl_chain_,joint_states_dyn_);
+    
+    joint_names_.clear();
+    for(int i=0;i<ndof;i++)
+        joint_names_.push_back(joint_states_.name[i]);
 
     jnt_pos_kdl_.resize(ndof);
     f_ext_.resize(kdl_chain_.getNrOfSegments());
@@ -260,6 +268,24 @@ bool LWRCommon::configureHook()
     return true;
 }
 
+void LWRCommon::buildJointIndexMap(const std::vector<std::string>& joint_names)
+{
+    joints_idx_.clear();
+    
+    for(int i=0,j=0;i<kdl_chain_.getNrOfSegments();i++)
+    {
+        if(kdl_chain_.getSegment(i).getJoint().getName() == joint_names[j])
+        {
+            joints_idx_.push_back(j);
+            j++;
+        }
+    }
+}
+const vector< int > LWRCommon::getJointMapIndex()
+{
+    return joints_idx_;
+}
+
 void LWRCommon::resetJointImpedanceGains()
 {
     this->setJointImpedance(kp_default_,kd_default_);
@@ -270,8 +296,8 @@ void LWRCommon::resetCartesianImpedanceGains()
 }
 void LWRCommon::setInitialJointPosition(const std::vector<double>& jnt_pos_cmd)
 {
-    if(!jnt_pos_cmd.size() == joints_idx_.size()){
-        log(Error) << "Invalid size ( found "<<jnt_pos_cmd.size() << " should be " << joints_idx_.size() << ")" << endlog();
+    if(!jnt_pos_cmd.size() == kdl_chain_.getNrOfJoints()){
+        log(Error) << "Invalid size ( found "<<jnt_pos_cmd.size() << " should be " << kdl_chain_.getNrOfJoints() << ")" << endlog();
         return;
     }
 
@@ -288,13 +314,18 @@ bool LWRCommon::safetyChecks(const VectorXd& position,
     safetyCheck(torque,trq_limits_,"Torque");
 }
 
+int LWRCommon::getNrOfJoints()
+{
+    return kdl_chain_.getNrOfJoints();
+}
+
 bool LWRCommon::safetyCheck(const VectorXd& v,
                          const VectorXd& limits,
                          const std::string& name)
 {
-    if(v.size() != joints_idx_.size())
+    if(v.size() != kdl_chain_.getNrOfJoints())
     {
-        log(Error) << name<<" vector size error "<<v.size()<<"!="<<joints_idx_.size()<<endlog();
+        log(Error) << name<<" vector size error "<<v.size()<<"!="<<kdl_chain_.getNrOfJoints()<<endlog();
         return false;
     }
 
@@ -312,15 +343,15 @@ bool LWRCommon::safetyCheck(const VectorXd& v,
 
 bool LWRCommon::setJointImpedance(const VectorXd& stiffness, const VectorXd& damping)
 {
-    if(! (stiffness.size() == joints_idx_.size() && damping.size() == joints_idx_.size()))
+    if(! (stiffness.size() == kdl_chain_.getNrOfJoints() && damping.size() == kdl_chain_.getNrOfJoints()))
     {
         log(Error) << "Size error, not setting impedance (stiff size "
                             <<stiffness.size()<<" damp size "<<damping.size()
-                            <<", should be "<<joints_idx_.size()<<")"<<endlog();
+                            <<", should be "<<kdl_chain_.getNrOfJoints()<<")"<<endlog();
         return false;
     }
 
-    for(unsigned j=0;j<joints_idx_.size();++j)
+    for(unsigned j=0;j<kdl_chain_.getNrOfJoints();++j)
     {
         jnt_imp_.stiffness[j] = stiffness[j];
         jnt_imp_.damping[j] = damping[j];
@@ -333,9 +364,9 @@ bool LWRCommon::setJointImpedance(const VectorXd& stiffness, const VectorXd& dam
 }
 bool LWRCommon::setGravityMode()
 {
-    VectorXd s(joints_idx_.size());
+    VectorXd s(kdl_chain_.getNrOfJoints());
     s.setZero();
-    VectorXd d(joints_idx_.size());
+    VectorXd d(kdl_chain_.getNrOfJoints());
     d.setZero();
     return this->setJointImpedance(s,d);
 }
@@ -374,7 +405,7 @@ bool LWRCommon::setCartesianImpedance(const VectorXd& cart_stiffness, const Vect
 
 void LWRCommon::updateJointImpedance(const lwr_fri::FriJointImpedance& impedance)
 {
-    for(unsigned int i=0;i<joints_idx_.size()
+    for(unsigned int i=0;i<kdl_chain_.getNrOfJoints()
         && i<impedance.damping.size()
         && i<impedance.stiffness.size();i++)
     {
@@ -446,7 +477,7 @@ void LWRCommon::stepInternalModel(
     const Eigen::VectorXd& jnt_vel,
     const Eigen::VectorXd& jnt_trq)
 {
-    const int ndof = joints_idx_.size();
+    const int ndof = kdl_chain_.getNrOfJoints();
 
     TimeService::nsecs tstart,tstart_wait;
     tstart = TimeService::Instance()->getNSecs();

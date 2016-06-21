@@ -27,34 +27,61 @@ bool LWRSimRemote::configureHook()
 }
 void LWRSimRemote::gazeboStateCallback(ConstJointStatePtr& _msg)
 {
+    Logger::In in(getName());
     static bool rec_one = false;
 
     // Dump the message contents to stdout.
     // std::cout << _msg->time().sec()<<" " <<_msg->time().nsec()<<std::endl;
 
-    size_t pos_size = _msg->position().size();
-    size_t vel_size = _msg->velocity().size();
-    size_t eff_size = _msg->effort().size();
-
     if(!rec_one)
     {
         rec_one = true;
 
-        bool is_configured = LWRCommon::configureHook();
-        if(this->configure())
+        if(LWRCommon::configureHook())
+        {
+            const int ndof = LWRCommon::getNrOfJoints();
+            // Resize to the actual number of joints commanded
+            
+            joint_position_gazebo_in.setZero(ndof);
+            joint_velocity_gazebo_in.setZero(ndof);
+            joint_effort_gazebo_in.setZero(ndof);
+            
+            for(int i=0;i<_msg->name_size();i++)
+            {
+                joint_idx_map[_msg->name(i)] = i;
+                std::cout << _msg->name(i)<<" --> " <<i<<std::endl;
+            }
+            for(int i=0;i<getJointNames().size();i++)
+                std::cout << getJointNames().at(i)<<" --> " <<joint_idx_map[getJointNames().at(i)]<<std::endl;
             this->start();
+            
+        }else{
+            log(Error) << "Could not configure LWRCommon" << endlog();
+        }
     }
 
-    joint_position_gazebo_in = Map<const VectorXd>(_msg->position().data(),pos_size);
-    joint_velocity_gazebo_in = Map<const VectorXd>(_msg->velocity().data(),vel_size);
-    joint_effort_gazebo_in   = Map<const VectorXd>(_msg->effort().data(),eff_size);
+    const std::vector<std::string>& joint_names = getJointNames();
+    
+    for(int i=0;i<joint_names.size();++i)
+    {
+        joint_position_gazebo_in[i] = _msg->position(joint_idx_map[joint_names[i]]);
+        joint_velocity_gazebo_in[i] = _msg->velocity(joint_idx_map[joint_names[i]]);
+        joint_effort_gazebo_in[i]   = _msg->effort(joint_idx_map[joint_names[i]]);
+    }
 
+    //log(Debug) << "updating internal model + writing to ports" << endlog();
     stepInternalModel(joint_position_gazebo_in,joint_velocity_gazebo_in,joint_effort_gazebo_in);
+
     const Eigen::VectorXd& jnt_trq_out = LWRCommon::getComputedCommand();
 
     joint_state_msgs::msgs::JointState msg_out;
-    for(int i=0;i<jnt_trq_out.size();++i)
+    
+    for(int i=0;i<joint_names.size();++i)
+    {
         msg_out.add_effort(jnt_trq_out[i]);
+        msg_out.add_name(joint_names[i]);
+    }
+    
 
     gz_state_pub->Publish(msg_out/*,true*/);
 }

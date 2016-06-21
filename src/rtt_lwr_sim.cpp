@@ -71,40 +71,22 @@ bool LWRSim::configureHook()
     gazebo_joints_ = model->GetJoints();
     model_links_ = model->GetLinks();
 
-    RTT::log(RTT::Info)<<"Model has "<<gazebo_joints_.size()<<" joints"<<RTT::endlog();
-    RTT::log(RTT::Info)<<"Model has "<<model_links_.size()<<" links"<<RTT::endlog();
-
-    //NOTE: Get the joint names and store their indices
-    // Because we have base_joint (fixed), j0...j6, ati_joint (fixed)
-    int idx = 0;
-    joints_idx_.clear();
-    for(gazebo::physics::Joint_V::iterator jit=gazebo_joints_.begin();
-        jit != gazebo_joints_.end();++jit,++idx)
-    {
-
-        const std::string name = (*jit)->GetName();
-        // NOTE: Remove fake fixed joints (revolute with upper==lower==0
-        // NOTE: This is not used anymore thanks to <disableFixedJointLumping>
-        // Gazebo option (ati_joint is fixed but gazebo can use it )
-
-        if((*jit)->GetLowerLimit(0u) == (*jit)->GetUpperLimit(0u))
-        {
-            RTT::log(RTT::Info)<<"Not adding (fake) fixed joint ["<<name<<"] idx:"<<idx<<RTT::endlog();
-            continue;
-        }
-        joints_idx_.push_back(idx);
-        joint_names_.push_back(name);
-        RTT::log(RTT::Info)<<"Adding joint ["<<name<<"] idx:"<<idx<<RTT::endlog();
-    }
-    const int ndof = joints_idx_.size();
+    if(!LWRCommon::configureHook())
+        return false;
+    
+    std::vector<std::string> jn;
+    for(int i=0;i<model->GetJoints().size();i++)
+        jn.push_back(model->GetJoints()[i]->GetName());
+    
+    buildJointIndexMap(jn);
+    
+    const int ndof = getNrOfJoints();
 
     jnt_pos_.setZero(ndof);
     jnt_vel_.setZero(ndof);
     jnt_trq_.setZero(ndof);
 
-    is_configured = LWRCommon::configureHook();
-
-    return is_configured;
+    return true;
 }
 
 void LWRSim::WorldUpdateBegin()

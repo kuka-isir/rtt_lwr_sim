@@ -37,6 +37,8 @@ namespace lwr{
         Eigen::VectorXd joint_position_gazebo_in;
         Eigen::VectorXd joint_velocity_gazebo_in;
         Eigen::VectorXd joint_effort_gazebo_in;
+        
+        std::map<std::string,int> joint_idx_map;
 
     };
 }

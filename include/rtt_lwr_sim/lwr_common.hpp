@@ -56,9 +56,13 @@ namespace lwr{
         LWRCommon(std::string const& name);
         bool configureHook();
         void updateHook();
-
+        void buildJointIndexMap(const std::vector<std::string>& joint_names);
+        const std::vector<std::string> getJointNames();
+        const std::vector<int> getJointMapIndex();
+        
         virtual ~LWRCommon(){};
     protected:
+        int getNrOfJoints();
         void stepInternalModel(const Eigen::VectorXd& jnt_pos,
             const Eigen::VectorXd& jnt_vel,
             const Eigen::VectorXd& jnt_trq); // once jnt_pos,jnt_vel,jnt_trq, does all the calculations and write to ports
