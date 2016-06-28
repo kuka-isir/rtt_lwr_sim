@@ -57,8 +57,8 @@ namespace lwr{
         bool configureHook();
         void updateHook();
         void buildJointIndexMap(const std::vector<std::string>& joint_names);
-        const std::vector<std::string> getJointNames();
-        const std::vector<int> getJointMapIndex();
+        const std::vector<std::string>& getJointNames();
+        const std::vector<int>& getJointMapIndex();
         
         virtual ~LWRCommon(){};
     protected:

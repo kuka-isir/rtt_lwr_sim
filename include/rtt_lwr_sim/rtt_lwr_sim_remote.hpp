@@ -39,6 +39,7 @@ namespace lwr{
         Eigen::VectorXd joint_effort_gazebo_in;
         
         std::map<std::string,int> joint_idx_map;
+        int nb_cmd_sent = 0;
 
     };
 }

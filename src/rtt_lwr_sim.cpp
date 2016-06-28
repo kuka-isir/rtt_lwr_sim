@@ -76,7 +76,9 @@ bool LWRSim::configureHook()
     
     std::vector<std::string> jn;
     for(int i=0;i<model->GetJoints().size();i++)
+    {
         jn.push_back(model->GetJoints()[i]->GetName());
+    }
     
     buildJointIndexMap(jn);
     
@@ -91,24 +93,26 @@ bool LWRSim::configureHook()
 
 void LWRSim::WorldUpdateBegin()
 {
-    if(!is_configured && !isRunning()) return;
+}
 
-    for(unsigned j=0; j<joints_idx_.size(); j++) {
-        jnt_pos_[j] = gazebo_joints_[joints_idx_[j]]->GetAngle(0).Radian();
-        jnt_vel_[j] = gazebo_joints_[joints_idx_[j]]->GetVelocity(0);
-        jnt_trq_[j] = gazebo_joints_[joints_idx_[j]]->GetForce(0u);
+void LWRSim::WorldUpdateEnd()
+{
+    if(!isRunning()) return;
+
+    // Read From gazebo simulation
+    for(unsigned j=0; j<getJointMapIndex().size(); j++) {
+        jnt_pos_[j] = gazebo_joints_[getJointMapIndex()[j]]->GetAngle(0).Radian();
+        jnt_vel_[j] = gazebo_joints_[getJointMapIndex()[j]]->GetVelocity(0);
+        jnt_trq_[j] = gazebo_joints_[getJointMapIndex()[j]]->GetForce(0u);
     }
-
-
-
     // Do set pos if asked
     if(set_joint_pos_no_dynamics_)
     {
-        for(unsigned j=0; j<joints_idx_.size(); j++)
+        for(unsigned j=0; j<getJointMapIndex().size(); j++)
 #ifdef GAZEBO_GREATER_6
-            gazebo_joints_[joints_idx_[j]]->SetPosition(0,jnt_pos_no_dyn_[j]);
+            gazebo_joints_[getJointMapIndex()[j]]->SetPosition(0,jnt_pos_no_dyn_[j]);
 #else
-            gazebo_joints_[joints_idx_[j]]->SetAngle(0,jnt_pos_no_dyn_[j]);
+            gazebo_joints_[getJointMapIndex()[j]]->SetAngle(0,jnt_pos_no_dyn_[j]);
 #endif
         // Set jnt pos
         jnt_pos_cmd_ = jnt_pos_ = jnt_pos_no_dyn_;
@@ -116,34 +120,25 @@ void LWRSim::WorldUpdateBegin()
     }
 
     stepInternalModel(jnt_pos_,jnt_vel_,jnt_trq_);
-}
-
-void LWRSim::WorldUpdateEnd()
-{
-    if(!is_configured && !isRunning()) return;
-
-    // Read From gazebo simulation
-    for(unsigned j=0; j<joints_idx_.size(); j++) {
-        jnt_pos_[j] = gazebo_joints_[joints_idx_[j]]->GetAngle(0).Radian();
-        jnt_vel_[j] = gazebo_joints_[joints_idx_[j]]->GetVelocity(0);
-        jnt_trq_[j] = gazebo_joints_[joints_idx_[j]]->GetForce(0u);
-    }
+    
     const Eigen::VectorXd& jnt_trq_out = LWRCommon::getComputedCommand();
     // If user is connected, let's write command to gazebo
     if(this->hasReceivedAtLeastOneCommand())
     {
-        for(unsigned j=0; j<joints_idx_.size(); j++)
-            gazebo_joints_[joints_idx_[j]]->SetForce(0,jnt_trq_out[j]);
+        model->SetEnabled(true);
+        for(unsigned j=0; j<getJointMapIndex().size(); j++)
+            gazebo_joints_[getJointMapIndex()[j]]->SetForce(0,jnt_trq_out[j]);
     }
     else
     {
+       model->SetEnabled(false);
         // If not, try to keep the same position TODO: find out why it drifts
-        for(auto joint : gazebo_joints_)
-#ifdef GAZEBO_GREATER_6
-              joint->SetPosition(0,joint->GetAngle(0).Radian());
-#else
-              joint->SetAngle(0,joint->GetAngle(0).Radian());
-#endif
+//         for(auto joint : gazebo_joints_)
+// #ifdef GAZEBO_GREATER_6
+//               joint->SetPosition(0,joint->GetAngle(0).Radian());
+// #else
+//               joint->SetAngle(0,joint->GetAngle(0).Radian());
+// #endif
     }
 }
 

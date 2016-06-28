@@ -127,7 +127,7 @@ bool LWRCommon::readyService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse
 {
     return true;
 }
-const vector< string > LWRCommon::getJointNames()
+const vector< string >& LWRCommon::getJointNames()
 {
     return joint_names_;
 }
@@ -264,24 +264,29 @@ bool LWRCommon::configureHook()
 
     resetJointImpedanceGains();
     resetCartesianImpedanceGains();
-
+    
     return true;
 }
 
-void LWRCommon::buildJointIndexMap(const std::vector<std::string>& joint_names)
+void LWRCommon::buildJointIndexMap(const std::vector<std::string>& 
+                                    jnt_names_from_gz)
 {
-    joints_idx_.clear();
-    
-    for(int i=0,j=0;i<kdl_chain_.getNrOfSegments();i++)
+    if(!LWRCommon::isConfigured() || !joint_names_.size())
     {
-        if(kdl_chain_.getSegment(i).getJoint().getName() == joint_names[j])
-        {
-            joints_idx_.push_back(j);
-            j++;
-        }
+        log(Error) << "Not configured, can't build joint map index" << endlog();
+        return;
+    }
+    joints_idx_.clear();
+
+    for(auto name : joint_names_)
+    {
+        auto it = std::find(jnt_names_from_gz.begin(), 
+                jnt_names_from_gz.end(), name);
+        if (it != jnt_names_from_gz.end())
+            joints_idx_.push_back(std::distance(jnt_names_from_gz.begin(), it));
     }
 }
-const vector< int > LWRCommon::getJointMapIndex()
+const vector< int >& LWRCommon::getJointMapIndex()
 {
     return joints_idx_;
 }
@@ -735,9 +740,7 @@ void LWRCommon::stepInternalModel(
     port_JointStatesCommand.write(joint_states_cmd_);
     port_JointStatesDynamics.write(joint_states_dyn_);
 
-    port_JointPosition.write(jnt_pos);
-    port_JointVelocity.write(jnt_vel);
-    port_JointTorque.write(jnt_trq);
+
     port_GravityTorque.write(jnt_trq_grav_kdl_.data);
 
     port_CartesianPosition.write(cart_pos_);
@@ -754,6 +757,10 @@ void LWRCommon::stepInternalModel(
     port_RobotState.write(robot_state);
     port_FRIState.write(fri_state);
 
+    port_JointPosition.write(jnt_pos);
+    port_JointVelocity.write(jnt_vel);
+    port_JointTorque.write(jnt_trq);
+    
     TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
 
     if(verbose)

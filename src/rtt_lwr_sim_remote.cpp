@@ -49,10 +49,8 @@ void LWRSimRemote::gazeboStateCallback(ConstJointStatePtr& _msg)
             for(int i=0;i<_msg->name_size();i++)
             {
                 joint_idx_map[_msg->name(i)] = i;
-                std::cout << _msg->name(i)<<" --> " <<i<<std::endl;
             }
-            for(int i=0;i<getJointNames().size();i++)
-                std::cout << getJointNames().at(i)<<" --> " <<joint_idx_map[getJointNames().at(i)]<<std::endl;
+
             this->start();
             
         }else{
@@ -84,6 +82,8 @@ void LWRSimRemote::gazeboStateCallback(ConstJointStatePtr& _msg)
     
 
     gz_state_pub->Publish(msg_out/*,true*/);
+    nb_cmd_sent++;
+    // std::cout << "cmd <-- "<<nb_cmd_sent << std::endl;
 }
 
 ORO_CREATE_COMPONENT(lwr::LWRSimRemote)
