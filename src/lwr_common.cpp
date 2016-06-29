@@ -111,7 +111,7 @@ bool LWRCommon::readyService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse
 {
     return true;
 }
-const vector< string >& LWRCommon::getJointNames()
+const std::vector< std::string >& LWRCommon::getJointNames()
 {
     return joint_names_;
 }
@@ -270,7 +270,7 @@ void LWRCommon::buildJointIndexMap(const std::vector<std::string>&
             joints_idx_.push_back(std::distance(jnt_names_from_gz.begin(), it));
     }
 }
-const vector< int >& LWRCommon::getJointMapIndex()
+const std::vector< int >& LWRCommon::getJointMapIndex()
 {
     return joints_idx_;
 }
