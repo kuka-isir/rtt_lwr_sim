@@ -80,7 +80,12 @@ bool LWRSim::configureHook()
 
 void LWRSim::WorldUpdateEnd()
 {
-    if(!isRunning()) return;
+    if(!isRunning())
+    {
+        if(model)
+            model->SetEnabled(false);
+        return;
+    }
 
     const auto& jidx = getJointMapIndex();
     // Read From gazebo simulation
