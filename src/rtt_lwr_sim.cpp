@@ -9,7 +9,8 @@ using namespace KDL;
 using namespace RTT;
 using namespace RTT::os;
 using namespace Eigen;
-LWRSim::LWRSim(const string& name): LWRCommon(name)
+
+LWRSim::LWRSim(const std::string& name): LWRCommon(name)
 {
     this->addOperation("getModel",&LWRSim::getModel,this,OwnThread);
     world_end = gazebo::event::Events::ConnectWorldUpdateEnd(std::bind(&LWRSim::WorldUpdateEnd,this));

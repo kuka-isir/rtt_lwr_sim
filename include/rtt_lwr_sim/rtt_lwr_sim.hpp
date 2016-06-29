@@ -17,7 +17,9 @@ namespace lwr{
         LWRSim(std::string const& name);
         bool configureHook();
         void WorldUpdateEnd();
-        bool getModel(const std::string& gazebo_comp_name,const std::string& model_name,double timeout_s = 20.0);
+        bool getModel(const std::string& gazebo_comp_name,
+            const std::string& model_name,
+            double timeout_s = 20.0);
 
         virtual ~LWRSim(){};
     protected:
