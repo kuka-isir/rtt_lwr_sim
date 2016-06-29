@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rtt_lwr_sim)
 
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   lwr_fri
   rtt_ros_kdl_tools
-  model_joint_plugin
+  # model_joint_plugin
 )
 
 find_package(gazebo REQUIRED)
@@ -62,18 +62,18 @@ target_link_libraries(${PROJECT_NAME}
    lwr_common
 )
 
-orocos_component(${PROJECT_NAME}_remote src/rtt_lwr_sim_remote.cpp)
-set_property(TARGET ${PROJECT_NAME}_remote APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
-
-target_link_libraries(${PROJECT_NAME}_remote
-   ${catkin_LIBRARIES}
-   ${USE_OROCOS_LIBRARIES}
-   ${kdl_parser_LIBRARIES}
-   ${orocos_kdl_LIBRARIES}
-   ${kdl_conversions_LIBRARIES}
-   ${GAZEBO_LIBRARIES}
-   lwr_common
-)
+# orocos_component(${PROJECT_NAME}_remote src/rtt_lwr_sim_remote.cpp)
+# set_property(TARGET ${PROJECT_NAME}_remote APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
+# 
+# target_link_libraries(${PROJECT_NAME}_remote
+#    ${catkin_LIBRARIES}
+#    ${USE_OROCOS_LIBRARIES}
+#    ${kdl_parser_LIBRARIES}
+#    ${orocos_kdl_LIBRARIES}
+#    ${kdl_conversions_LIBRARIES}
+#    ${GAZEBO_LIBRARIES}
+#    lwr_common
+# )
 
 # add_dependencies(${PROJECT_NAME} lwr_fri_generate_messages_cpp)
 orocos_generate_package(INCLUDE_DIRS include)
