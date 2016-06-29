@@ -11,8 +11,7 @@ using namespace RTT::os;
 using namespace Eigen;
 LWRSim::LWRSim(const string& name): LWRCommon(name)
 {
-    this->addOperation("getModel",&LWRSim::getModel,this,ClientThread);
-    world_begin =  gazebo::event::Events::ConnectWorldUpdateBegin(std::bind(&LWRSim::WorldUpdateBegin,this));
+    this->addOperation("getModel",&LWRSim::getModel,this,OwnThread);
     world_end = gazebo::event::Events::ConnectWorldUpdateEnd(std::bind(&LWRSim::WorldUpdateEnd,this));
 }
 
@@ -41,38 +40,18 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
     return bool(model);
 }
 
-bool LWRSim::setLinkGravityMode(const std::string& link_name,bool gravity_mode)
-{
-    // HACK: I want to remove gravity for ati_link (force torque sensor), but
-    // <gravity> tag does not work for some reason, so I'm doin' it here.
-    // FIXME
-
-    for(gazebo::physics::Link_V::iterator it = this->model_links_.begin();
-        it != this->model_links_.end();++it)
-        {
-            if((*it)->GetName() == link_name)
-            {
-                gravity_mode_.insert(std::make_pair((*it),gravity_mode));
-                RTT::log(RTT::Warning)<<"Setting link "<<link_name<<" to "<<((*it)->GetGravityMode()? "true":"false")<<RTT::endlog();
-                return true;
-            }
-        }
-    RTT::log(RTT::Error)<<"["<<getName()<<"] setLinkGravityMode() -> "<<link_name<<" does not exists !"<<RTT::endlog();
-    return false;
-}
-
 bool LWRSim::configureHook()
 {
     if(model.get() == NULL) {
         RTT::log(RTT::Error)<<"No model could be loaded"<<RTT::endlog();
         return false;
     }
+    
+    if(!LWRCommon::configureHook())
+        return false;
     // Get the joints
     gazebo_joints_ = model->GetJoints();
     model_links_ = model->GetLinks();
-
-    if(!LWRCommon::configureHook())
-        return false;
     
     std::vector<std::string> jn;
     for(int i=0;i<model->GetJoints().size();i++)
@@ -80,8 +59,16 @@ bool LWRSim::configureHook()
         jn.push_back(model->GetJoints()[i]->GetName());
     }
     
+    for(int i=0; i<jn.size(); i++)
+        log(RTT::Debug) << "- gz_joint ["<<jn[i]<<"] --> idx "<<i << endlog();
+        
     buildJointIndexMap(jn);
     
+    const auto& jidx = getJointMapIndex();
+    
+    for(unsigned i=0; i<jidx.size(); i++)
+        log(RTT::Debug) << "- actuated_joint ["<<gazebo_joints_[jidx[i]]->GetName()<<"] --> idx "<<jidx[i] << endlog();
+        
     const int ndof = getNrOfJoints();
 
     jnt_pos_.setZero(ndof);
@@ -91,32 +78,16 @@ bool LWRSim::configureHook()
     return true;
 }
 
-void LWRSim::WorldUpdateBegin()
-{
-}
-
 void LWRSim::WorldUpdateEnd()
 {
     if(!isRunning()) return;
 
+    const auto& jidx = getJointMapIndex();
     // Read From gazebo simulation
-    for(unsigned j=0; j<getJointMapIndex().size(); j++) {
-        jnt_pos_[j] = gazebo_joints_[getJointMapIndex()[j]]->GetAngle(0).Radian();
-        jnt_vel_[j] = gazebo_joints_[getJointMapIndex()[j]]->GetVelocity(0);
-        jnt_trq_[j] = gazebo_joints_[getJointMapIndex()[j]]->GetForce(0u);
-    }
-    // Do set pos if asked
-    if(set_joint_pos_no_dynamics_)
-    {
-        for(unsigned j=0; j<getJointMapIndex().size(); j++)
-#ifdef GAZEBO_GREATER_6
-            gazebo_joints_[getJointMapIndex()[j]]->SetPosition(0,jnt_pos_no_dyn_[j]);
-#else
-            gazebo_joints_[getJointMapIndex()[j]]->SetAngle(0,jnt_pos_no_dyn_[j]);
-#endif
-        // Set jnt pos
-        jnt_pos_cmd_ = jnt_pos_ = jnt_pos_no_dyn_;
-        set_joint_pos_no_dynamics_ = false;
+    for(unsigned i=0; i<jidx.size(); i++) {
+        jnt_pos_[i] = gazebo_joints_[jidx[i]]->GetAngle(0).Radian();
+        jnt_vel_[i] = gazebo_joints_[jidx[i]]->GetVelocity(0);
+        jnt_trq_[i] = gazebo_joints_[jidx[i]]->GetForce(0u);
     }
 
     stepInternalModel(jnt_pos_,jnt_vel_,jnt_trq_);
@@ -125,9 +96,19 @@ void LWRSim::WorldUpdateEnd()
     // If user is connected, let's write command to gazebo
     if(this->hasReceivedAtLeastOneCommand())
     {
+        static bool once = false;
+        if(!once)
+        {
+            once = true;
+            log(RTT::Info) << "["<<getName()<<"] Getting first command Tau = "<<jnt_trq_out.transpose() << endlog();
+            for(int i=0;i<jidx.size();i++)
+            {
+                log(RTT::Info) << "  T["<<i<<"] (idx:"<<jidx[i]<<") --> "<<jnt_trq_out[i]<<endlog();
+            }
+        }
         model->SetEnabled(true);
-        for(unsigned j=0; j<getJointMapIndex().size(); j++)
-            gazebo_joints_[getJointMapIndex()[j]]->SetForce(0,jnt_trq_out[j]);
+        for(unsigned i=0; i<jidx.size(); i++)
+            gazebo_joints_[jidx[i]]->SetForce(0,jnt_trq_out[i]);
     }
     else
     {

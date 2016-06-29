@@ -28,8 +28,6 @@ verbose(false),
 gravity_vector(0.,0.,-9.81289)
 {
     this->addOperation("ready",&LWRCommon  ::readyService,this,RTT::ClientThread);
-    //this->addAttribute("fromKRL", m_fromKRL);
-    //this->addProperty("using_corba", using_corba).doc("");
     this->addProperty("synchronize_with_commands", sync_with_cmds_).doc("");
     this->addProperty("synchronize_commands_timeout_s", timeout_s).doc("");
     this->addProperty("kp_default", kp_default_).doc("");
@@ -37,9 +35,6 @@ gravity_vector(0.,0.,-9.81289)
     this->addProperty("kcp_default", kcp_default_).doc("");
     this->addProperty("kcd_default", kcd_default_).doc("");
     //this->addAttribute("toKRL", m_toKRL);
-
-    this->addProperty("fri_port", prop_fri_port).doc("");
-    //this->addProperty("joint_offset", prop_joint_offset).doc("");
 
     this->addProperty("root_link", root_link_).doc("");
     this->addProperty("set_brakes", set_brakes_).doc("");
@@ -51,9 +46,6 @@ gravity_vector(0.,0.,-9.81289)
     this->addProperty("use_sim_clock",use_sim_clock).doc("");
     this->addProperty("safety_checks",safety_checks_).doc("");
     this->addProperty("robot_name",robot_name_).doc("The name of the robot lwr/lwr_sim");
-
-    /*this->ports()->addPort("SyncStatus",port_sync_status).doc("");
-    this->ports()->addEventPort("SyncCommand",port_sync_cmd).doc("");*/
 
     this->ports()->addPort("CartesianImpedanceCommand", port_CartesianImpedanceCommand).doc("");
     this->ports()->addPort("CartesianWrenchCommand", port_CartesianWrenchCommand).doc("");
@@ -99,16 +91,8 @@ gravity_vector(0.,0.,-9.81289)
     this->addOperation("setGravityMode",&LWRCommon::setGravityMode,this,OwnThread);
     this->addOperation("resetJointImpedanceGains",&LWRCommon::resetJointImpedanceGains,this,OwnThread);
 
-    // this->addOperation("setJointTorqueControlMode",&LWRCommon::setJointTorqueControlMode,this,OwnThread);
-    // this->addOperation("setJointImpedanceControlMode",&LWRCommon::setJointImpedanceControlMode,this,OwnThread);
-    // this->addOperation("setCartesianImpedanceControlMode",&LWRCommon::setCartesianImpedanceControlMode,this,OwnThread);
-
     this->addOperation("setInitialJointPosition",&LWRCommon::setInitialJointPosition,this,OwnThread);
 
-}
-
-void LWRCommon::updateHook()
-{
 }
 
 void LWRCommon::setJointTorqueControlMode()
@@ -472,6 +456,8 @@ bool LWRCommon::hasReceivedAtLeastOneCommand()
                 has_one_cmd = true;
             break;
         default:
+            // log(Error) << "hasReceivedAtLeastOneCommand() Wrong control mode "
+            // << "robot_state.control="<<robot_state.control<<endlog();
             break;
     }
     return has_one_cmd;
@@ -524,6 +510,7 @@ void LWRCommon::stepInternalModel(
             robot_state.control = FRI_CTRL_CART_IMP;
             break;
         default:
+            // log(Error) << "fri_to_krl.intData[1] is wrong : "<<fri_to_krl.intData[1]<<endlog();
             robot_state.control = FRI_CTRL_OTHER;
             break;
     }

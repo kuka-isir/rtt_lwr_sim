@@ -55,13 +55,14 @@ namespace lwr{
     public:
         LWRCommon(std::string const& name);
         bool configureHook();
-        void updateHook();
+        virtual ~LWRCommon(){};
+    protected:
         void buildJointIndexMap(const std::vector<std::string>& joint_names);
         const std::vector<std::string>& getJointNames();
         const std::vector<int>& getJointMapIndex();
         
-        virtual ~LWRCommon(){};
-    protected:
+        
+    
         int getNrOfJoints();
         void stepInternalModel(const Eigen::VectorXd& jnt_pos,
             const Eigen::VectorXd& jnt_vel,
@@ -79,10 +80,12 @@ namespace lwr{
         bool setGravityMode();
         bool setJointImpedance(const Eigen::VectorXd& stiffness, const Eigen::VectorXd& damping);
         bool setCartesianImpedance(const Eigen::VectorXd& cart_stiffness, const Eigen::VectorXd& cart_damping);
-
-        RTT::OutputPort<bool> port_sync_status;
-        RTT::InputPort<bool> port_sync_cmd;
-
+        bool safetyChecks(const Eigen::VectorXd& position,const Eigen::VectorXd& velocity,const Eigen::VectorXd& torque);
+        bool safetyCheck(const Eigen::VectorXd& v, const Eigen::VectorXd& limits,const std::string& name="");
+        void updateJointImpedance(const lwr_fri::FriJointImpedance& impedance);
+        void updateCartesianImpedance(const lwr_fri::CartesianImpedance& cart_impedance);
+        bool hasReceivedAtLeastOneCommand();
+    protected:
         RTT::InputPort<lwr_fri::CartesianImpedance > port_CartesianImpedanceCommand;
         RTT::InputPort<geometry_msgs::Wrench > port_CartesianWrenchCommand;
         RTT::InputPort<geometry_msgs::Pose > port_CartesianPositionCommand;
@@ -98,24 +101,24 @@ namespace lwr{
         RTT::OutputPort<geometry_msgs::WrenchStamped > port_CartesianWrenchStamped;
         RTT::OutputPort<tFriRobotState > port_RobotState;
         RTT::OutputPort<tFriIntfState > port_FRIState;
-        RTT::OutputPort<Eigen::VectorXd > port_JointVelocity;
         RTT::OutputPort<geometry_msgs::Twist > port_CartesianVelocity;
         RTT::OutputPort<geometry_msgs::Pose > port_CartesianPosition;
         RTT::OutputPort<geometry_msgs::PoseStamped > port_CartesianPositionStamped;
         RTT::OutputPort<Eigen::MatrixXd > port_MassMatrix;
         RTT::OutputPort<KDL::Jacobian > port_Jacobian;
-        RTT::OutputPort<Eigen::VectorXd > port_JointTorque,
-                                          port_GravityTorque,
-                                          port_JointPosition,
-                                          port_JointTorqueRaw,
-                                          port_JointPositionFRIOffset;
+        
+        RTT::OutputPort<Eigen::VectorXd >   port_JointVelocity,
+                                            port_JointTorque,
+                                            port_GravityTorque,
+                                            port_JointPosition,
+                                            port_JointTorqueRaw,
+                                            port_JointPositionFRIOffset;
+    private:
         int prop_fri_port;
         double dr_max_;
 
         bool set_joint_pos_no_dynamics_;
         bool set_brakes_;
-
-        RTT::InputPort<sensor_msgs::JointState > port_JointStateGazebo;
 
         Eigen::VectorXd pos_limits_,
                         vel_limits_,
@@ -204,12 +207,6 @@ namespace lwr{
         std::string root_link_,tip_link_,robot_ns_,tf_prefix_;
 
         bool use_sim_clock;
-
-        bool safetyChecks(const Eigen::VectorXd& position,const Eigen::VectorXd& velocity,const Eigen::VectorXd& torque);
-        bool safetyCheck(const Eigen::VectorXd& v, const Eigen::VectorXd& limits,const std::string& name="");
-        void updateJointImpedance(const lwr_fri::FriJointImpedance& impedance);
-        void updateCartesianImpedance(const lwr_fri::CartesianImpedance& cart_impedance);
-        bool hasReceivedAtLeastOneCommand();
         //KDL Stuff
         KDL::Wrenches f_ext_;
 
