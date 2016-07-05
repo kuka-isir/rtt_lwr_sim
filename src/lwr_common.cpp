@@ -547,7 +547,10 @@ void LWRCommon::stepInternalModel(
 
         if(jnt_pos_cmd_fs == NoData && jnt_trq_cmd_fs == NoData && cart_pos_cmd_fs == NoData)
             break;
-
+        // To Zero jnt_imp
+        if(jnt_pos_cmd_fs == NoData)
+            jnt_pos_cmd_ = jnt_pos;
+            
         switch(static_cast<FRI_CTRL>(robot_state.control)){
             case FRI_CTRL_JNT_IMP:
                 if(jnt_trq_cmd_fs == NewData || jnt_pos_cmd_fs == NewData)
@@ -612,7 +615,7 @@ void LWRCommon::stepInternalModel(
         jnt_pos_cmd_.resize(ndof);
         jnt_pos_cmd_ = jnt_pos;
     }
-
+    
     TimeService::nsecs tduration_wait = TimeService::Instance()->getNSecs(tstart_wait);
 
     cart_wrench_cmd_fs = port_CartesianWrenchCommand.readNewest(cart_wrench_cmd_);
