@@ -1,5 +1,7 @@
 <launch>
 
+  <arg name="debug" default="false"/>
+
   <include file="$(find lwr_utils)/launch/run.launch">
     <arg name="ops_script" value="$(find rtt_lwr_sim)/scripts/run.ops"/>
     <arg name="sim" value="true"/>
@@ -12,7 +14,7 @@
     <arg name="load_handle" default="true" />
     <arg name="load_head_cam" default="true" />
     <arg name="load_screwdriver" default="true" />
-    <arg name="debug" value="false"/>
+    <arg name="debug" value="$(arg debug)"/>
   </include>
 
 </launch>
