@@ -1,6 +1,7 @@
 <launch>
 
   <arg name="debug" default="false"/>
+  <arg name="robot_description_upload_file" default="$(find lwr_description)/launch/lwr_upload.launch"/>
 
   <include file="$(find lwr_utils)/launch/run.launch">
     <arg name="ops_script" value="$(find rtt_lwr_sim)/scripts/run.ops"/>
@@ -15,6 +16,7 @@
     <arg name="load_head_cam" default="true" />
     <arg name="load_screwdriver" default="true" />
     <arg name="debug" value="$(arg debug)"/>
+    <arg name="robot_description_upload_file" value="$(arg robot_description_upload_file)"/>
   </include>
 
 </launch>
