@@ -149,7 +149,7 @@ bool LWRCommon::configureHook()
         <<endlog();
         return false;
     }
-    
+
     const int ndof = kdl_chain_.getNrOfJoints();
 
     if(ndof == 0)
@@ -159,7 +159,7 @@ bool LWRCommon::configureHook()
     }
 
     RTT::log(RTT::Info)<<"Gazebo model found "<<ndof<<" joints "<<RTT::endlog();
-    
+
     id_dyn_solver.reset(new ChainDynParam(kdl_chain_,gravity_vector));
     id_rne_solver.reset(new ChainIdSolver_RNE(kdl_chain_,gravity_vector));
     fk_vel_solver.reset(new ChainFkSolverVel_recursive(kdl_chain_));
@@ -203,7 +203,7 @@ bool LWRCommon::configureHook()
     rtt_ros_kdl_tools::initJointStateFromKDLCHain(kdl_chain_,joint_states_);
     rtt_ros_kdl_tools::initJointStateFromKDLCHain(kdl_chain_,joint_states_cmd_);
     rtt_ros_kdl_tools::initJointStateFromKDLCHain(kdl_chain_,joint_states_dyn_);
-    
+
     joint_names_.clear();
     for(int i=0;i<ndof;i++)
         joint_names_.push_back(joint_states_.name[i]);
@@ -248,11 +248,11 @@ bool LWRCommon::configureHook()
 
     resetJointImpedanceGains();
     resetCartesianImpedanceGains();
-    
+
     return true;
 }
 
-void LWRCommon::buildJointIndexMap(const std::vector<std::string>& 
+void LWRCommon::buildJointIndexMap(const std::vector<std::string>&
                                     jnt_names_from_gz)
 {
     if(!LWRCommon::isConfigured() || !joint_names_.size())
@@ -264,7 +264,7 @@ void LWRCommon::buildJointIndexMap(const std::vector<std::string>&
 
     for(auto name : joint_names_)
     {
-        auto it = std::find(jnt_names_from_gz.begin(), 
+        auto it = std::find(jnt_names_from_gz.begin(),
                 jnt_names_from_gz.end(), name);
         if (it != jnt_names_from_gz.end())
             joints_idx_.push_back(std::distance(jnt_names_from_gz.begin(), it));
@@ -285,7 +285,7 @@ void LWRCommon::resetCartesianImpedanceGains()
 }
 void LWRCommon::setInitialJointPosition(const std::vector<double>& jnt_pos_cmd)
 {
-    if(!jnt_pos_cmd.size() == kdl_chain_.getNrOfJoints()){
+    if(!(jnt_pos_cmd.size() == kdl_chain_.getNrOfJoints())){
         log(Error) << "Invalid size ( found "<<jnt_pos_cmd.size() << " should be " << kdl_chain_.getNrOfJoints() << ")" << endlog();
         return;
     }
@@ -550,7 +550,7 @@ void LWRCommon::stepInternalModel(
         // To Zero jnt_imp
         if(jnt_pos_cmd_fs == NoData)
             jnt_pos_cmd_ = jnt_pos;
-            
+
         switch(static_cast<FRI_CTRL>(robot_state.control)){
             case FRI_CTRL_JNT_IMP:
                 if(jnt_trq_cmd_fs == NewData || jnt_pos_cmd_fs == NewData)
@@ -615,7 +615,7 @@ void LWRCommon::stepInternalModel(
         jnt_pos_cmd_.resize(ndof);
         jnt_pos_cmd_ = jnt_pos;
     }
-    
+
     TimeService::nsecs tduration_wait = TimeService::Instance()->getNSecs(tstart_wait);
 
     cart_wrench_cmd_fs = port_CartesianWrenchCommand.readNewest(cart_wrench_cmd_);
@@ -750,7 +750,7 @@ void LWRCommon::stepInternalModel(
     port_JointPosition.write(jnt_pos);
     port_JointVelocity.write(jnt_vel);
     port_JointTorque.write(jnt_trq);
-    
+
     TimeService::nsecs tduration = TimeService::Instance()->getNSecs(tstart);
 
     if(verbose)
