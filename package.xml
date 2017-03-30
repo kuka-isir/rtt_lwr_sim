@@ -4,7 +4,7 @@
   <description>The RTT LWR 4+ Sim component</description>
   <maintainer email="hoarau.robotics@gmail.com">Antoine Hoarau</maintainer>
 
-  <license>BSD</license>
+  <license>CeCILL-C</license>
 
   <url type="website">http://ros.org/wiki/lwr_fri</url>
 
