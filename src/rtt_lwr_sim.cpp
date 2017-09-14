@@ -119,6 +119,8 @@ void LWRSim::WorldUpdateEnd()
     else
     {
        model->SetEnabled(false);
+       for(unsigned i=0; i<jidx.size(); i++)
+           gazebo_joints_[jidx[i]]->SetVelocity(0, 0.0);
         // If not, try to keep the same position TODO: find out why it drifts
 //         for(auto joint : gazebo_joints_)
 // #ifdef GAZEBO_GREATER_6
