@@ -26,12 +26,21 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
         return true;
     }
     gazebo::printVersion();
+#if GAZEBO_MAJOR_VERSION > 8
+    if(! gazebo::physics::WorldPtr())
+    {
+        log(Error) << "getWorldPtr does not seem to exists" << endlog();
+        return false;
+    }
+    model = gazebo::physics::WorldPtr()->ModelByName(getName());
+#else
     if(! gazebo::physics::get_world())
     {
         log(Error) << "getWorldPtr does not seem to exists" << endlog();
         return false;
     }
     model = gazebo::physics::get_world()->GetModel(getName());
+#endif
     if(model)
     {
         log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
@@ -91,7 +100,11 @@ void LWRSim::WorldUpdateEnd()
     const auto& jidx = getJointMapIndex();
     // Read From gazebo simulation
     for(unsigned i=0; i<jidx.size(); i++) {
+#if GAZEBO_MAJOR_VERSION > 8
+        jnt_pos_[i] = gazebo_joints_[jidx[i]]->Position(0);
+#else
         jnt_pos_[i] = gazebo_joints_[jidx[i]]->GetAngle(0).Radian();
+#endif
         jnt_vel_[i] = gazebo_joints_[jidx[i]]->GetVelocity(0);
         jnt_trq_[i] = gazebo_joints_[jidx[i]]->GetForce(0u);
     }

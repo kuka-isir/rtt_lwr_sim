@@ -20,8 +20,6 @@ namespace lwr{
         bool getModel(const std::string& gazebo_comp_name,
             const std::string& model_name,
             double timeout_s = 20.0);
-
-        virtual ~LWRSim(){};
     protected:
         gazebo::physics::ModelPtr model;
         gazebo::event::ConnectionPtr world_end;
