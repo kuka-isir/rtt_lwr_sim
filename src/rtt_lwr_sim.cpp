@@ -26,28 +26,25 @@ bool LWRSim::getModel(const std::string& gazebo_comp_name,
         return true;
     }
     gazebo::printVersion();
+
+    auto world = gazebo::physics::get_world();
+    if(! world)
+    {
+        log(Error) << "getWorldPtr does not seem to exists" << endlog();
+        return false;
+    }
 #if GAZEBO_MAJOR_VERSION > 8
-    if(! gazebo::physics::WorldPtr())
-    {
-        log(Error) << "getWorldPtr does not seem to exists" << endlog();
-        return false;
-    }
-    model = gazebo::physics::WorldPtr()->ModelByName(getName());
+    model = world->ModelByName(getName());
 #else
-    if(! gazebo::physics::get_world())
-    {
-        log(Error) << "getWorldPtr does not seem to exists" << endlog();
-        return false;
-    }
-    model = gazebo::physics::get_world()->GetModel(getName());
+    model = world->GetModel(getName());
 #endif
     if(model)
     {
         log(Info) << "Model ["<<model_name<<"] successfully loaded !"<< endlog();
         return true;
     }
-
-    return bool(model);
+    log(Error) << "Could not load model ["<<model_name<<"] !"<< endlog();
+    return false;
 }
 
 bool LWRSim::configureHook()
@@ -56,29 +53,29 @@ bool LWRSim::configureHook()
         RTT::log(RTT::Error)<<"No model could be loaded"<<RTT::endlog();
         return false;
     }
-    
+
     if(!LWRCommon::configureHook())
         return false;
     // Get the joints
     gazebo_joints_ = model->GetJoints();
     model_links_ = model->GetLinks();
-    
+
     std::vector<std::string> jn;
     for(int i=0;i<model->GetJoints().size();i++)
     {
         jn.push_back(model->GetJoints()[i]->GetName());
     }
-    
+
     for(int i=0; i<jn.size(); i++)
         log(RTT::Debug) << "- gz_joint ["<<jn[i]<<"] --> idx "<<i << endlog();
-        
+
     buildJointIndexMap(jn);
-    
+
     const auto& jidx = getJointMapIndex();
-    
+
     for(unsigned i=0; i<jidx.size(); i++)
         log(RTT::Debug) << "- actuated_joint ["<<gazebo_joints_[jidx[i]]->GetName()<<"] --> idx "<<jidx[i] << endlog();
-        
+
     const int ndof = getNrOfJoints();
 
     jnt_pos_.setZero(ndof);
@@ -110,7 +107,7 @@ void LWRSim::WorldUpdateEnd()
     }
 
     stepInternalModel(jnt_pos_,jnt_vel_,jnt_trq_);
-    
+
     const Eigen::VectorXd& jnt_trq_out = LWRCommon::getComputedCommand();
     // If user is connected, let's write command to gazebo
     if(this->hasReceivedAtLeastOneCommand())
